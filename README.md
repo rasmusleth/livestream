@@ -52,7 +52,7 @@ The product name and broader scope can stay open while the scoreboard workflow i
 
 ## Run the first prototype
 
-Requirements: Python 3.10+ and `ffmpeg` / `ffprobe` on your PATH. No Python packages or cloud services are needed.
+Initial development target: macOS with Python 3.12. Requirements: `ffmpeg` / `ffprobe` on your PATH. No Python packages or cloud services are needed.
 
 From the project folder:
 

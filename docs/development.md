@@ -11,7 +11,7 @@ Keep changes reviewable. One person or agent owns a change through implementatio
 
 ## Local checks
 
-Install Python 3.10+, Node.js 24, and FFmpeg/ffprobe. The application has no third-party Python or npm dependencies.
+The initial development target is macOS with Python 3.12. CI uses the `macos-26` runner. Install Python 3.12, Node.js 24, and FFmpeg/ffprobe. Other operating systems and Python versions are outside the current support scope. The application has no third-party Python or npm dependencies.
 
 ```sh
 python3 scripts/check.py
@@ -34,9 +34,7 @@ Five recording regression tests run when generated readings exist and are explic
 
 `.github/workflows/ci.yml` runs on PRs to `main`, pushes to `main`, and manual dispatch. It does not use path filters, so documentation-only PRs also produce the required result.
 
-- Python checks and tests run on Ubuntu and macOS with Python 3.10 and 3.12.
-- Browser JavaScript syntax is checked with Node.js 24 in every matrix job.
-- A final **CI** job reports success only when all matrix jobs succeed. Use the check name `CI` for branch protection.
+- One **CI** job runs Python checks and tests on macOS 26 with Python 3.12, plus JavaScript syntax checks with Node.js 24. Use the check name `CI` for branch protection.
 - New runs cancel superseded runs for the same PR/ref. Jobs have time limits and read-only repository permissions; checkout does not persist credentials.
 - Actions are pinned to commit IDs. Dependabot checks those action references weekly and proposes updates through PRs.
 
@@ -70,7 +68,7 @@ git push -u origin chore/repository-workflow
 Then:
 
 1. Open a PR with base `main` and compare branch `chore/repository-workflow`. The PR includes the prototype and workflow setup; keep it as a draft while reviewing.
-2. Wait for the matrix checks and final `CI` result. Resolve failures before treating the hosted workflow as verified.
+2. Wait for the `CI` check to pass. Resolve failures before treating the hosted workflow as verified.
 3. In repository **Settings → Branches**, add a classic branch protection rule for `main`.
 4. Require a pull request and the `CI` status check, and require the branch to be up to date. Leave required approving reviews disabled while you are the only maintainer. Keep force pushes and deletion disabled; apply the rule to administrators too if you want the same workflow for your own changes.
 5. Review the diff and merge when you are ready. After merge, the main-branch workflow will run again and Dependabot can discover the configuration on the default branch.

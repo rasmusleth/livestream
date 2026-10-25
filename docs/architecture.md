@@ -30,6 +30,8 @@ flowchart LR
 | `web/` | Synchronize the precomputed readings with video playback and expose diagnostic information. |
 | `tests/` | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording. |
 
+The initial development target is macOS with Python 3.12; CI uses macOS 26. Other operating systems and Python versions are outside the current support scope.
+
 The implementation uses Python's standard library, FFmpeg/ffprobe, and plain browser HTML/CSS/JavaScript. Node.js is a development tool for JavaScript syntax checks, not an application runtime.
 
 ### State semantics

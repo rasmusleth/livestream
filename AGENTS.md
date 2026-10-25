@@ -33,7 +33,7 @@ Run from the repository root:
 python3 scripts/check.py
 ```
 
-Python 3.10+, Node.js 24, FFmpeg, and ffprobe are required for the complete check. No Python or npm packages are required.
+The initial development target is macOS with Python 3.12. Node.js 24, FFmpeg, and ffprobe are also required for the complete check. No Python or npm packages are required.
 
 The check compiles Python in memory, validates browser JavaScript syntax and calibration bounds, and runs unit and generated-video pipeline tests. Real-recording tests are skipped when `data/readings.json` is absent. When changing extraction behavior and the recording is available, also run:
 
