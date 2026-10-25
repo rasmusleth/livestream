@@ -76,3 +76,15 @@ python3 -m unittest discover -s tests -v
 ```
 
 Generate readings before running recording regression checks. See [VALIDATION.md](VALIDATION.md) for the first clip's results and limits. Video files and generated readings are excluded from Git.
+
+## Contributing and repository guidance
+
+Read [AGENTS.md](AGENTS.md) for coding-agent instructions, [the architecture document](docs/architecture.md) for implemented and proposed boundaries, and [the development workflow](docs/development.md) for branches, PRs, and CI.
+
+Run the shared local and CI checks with:
+
+```sh
+python3 scripts/check.py
+```
+
+These checks include a generated-video pipeline test without needing the match recording. Real-recording regression checks additionally run when local generated readings exist.
