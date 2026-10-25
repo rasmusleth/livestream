@@ -1,0 +1,73 @@
+"""Local verification viewer, including byte-range video seeking."""
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+import argparse
+import json
+import mimetypes
+import re
+
+ROOT = Path(__file__).resolve().parent
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        route = self.path.split('?')[0]
+        routes = {'/': ROOT / 'web/index.html', '/app.js': ROOT / 'web/app.js',
+                  '/style.css': ROOT / 'web/style.css', '/readings.json': ROOT / 'data/readings.json',
+                  '/video': self.server.video}
+        path = routes.get(route)
+        if path is None or not path.is_file():
+            self.send_error(404, 'Not found. Run reader.py first if readings are missing.')
+            return
+        size = path.stat().st_size
+        start, end = 0, size - 1
+        requested = self.headers.get('Range')
+        if requested:
+            match = re.fullmatch(r'bytes=(\d+)-(\d*)', requested)
+            if not match:
+                self.send_error(416)
+                return
+            start = int(match[1])
+            end = min(int(match[2]) if match[2] else size - 1, size - 1)
+            if start > end:
+                self.send_response(416)
+                self.send_header('Content-Range', f'bytes */{size}')
+                self.end_headers()
+                return
+        self.send_response(206 if requested else 200)
+        self.send_header('Content-Type', mimetypes.guess_type(path)[0] or 'application/octet-stream')
+        self.send_header('Content-Length', str(end - start + 1))
+        self.send_header('Accept-Ranges', 'bytes')
+        self.send_header('Cache-Control', 'no-cache')
+        if requested:
+            self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
+        self.end_headers()
+        try:
+            with path.open('rb') as source:
+                source.seek(start)
+                remaining = end - start + 1
+                while remaining:
+                    chunk = source.read(min(256 * 1024, remaining))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--video', type=Path, default=ROOT / 'scoreboard-2-min-clip.mp4')
+    args = parser.parse_args()
+    metadata = json.loads((ROOT / 'data/readings.json').read_text())
+    if args.video.name != metadata['video']:
+        parser.error('Video filename does not match the analyzed recording.')
+    server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+    server.video = args.video.resolve()
+    print(f'Open http://127.0.0.1:{args.port} — Ctrl+C to stop', flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        server.server_close()
