@@ -48,4 +48,6 @@ Browser background throttling may delay the operator heartbeat and cause held-da
 
 Automated tests cover selection by source timestamp, backward seeking, paused clocks, invalid positions, dropped publishers, recovery, local HTTP delivery, and preservation of video range requests. They use controlled data and require no match footage.
 
-The overlay must also be checked visually with the real recording in a browser. An actual OBS scene test on the streaming Mac remains necessary before treating this as OBS-validated. Live capture latency, team-name configuration, manual overrides, and a live-ready graphic are outside this milestone.
+The browser verification covered recorded playback, seeking, pauses, transparency, and stopping/resuming replay output. On 2026-10-25, the user reported following the OBS setup instructions on their Mac and confirmed that everything worked as planned. This establishes a user-reported OBS check of the recorded-playback workflow; it is not validation of live capture or every failure/recovery scenario.
+
+Live capture latency, team-name configuration, manual overrides, and a live-ready graphic are outside this milestone.
