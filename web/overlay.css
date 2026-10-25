@@ -1,0 +1,17 @@
+:root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; }
+.scoreboard { display: flex; align-items: stretch; position: absolute; top: 40px; left: 40px; height: 76px; color: #f8fafc; border-radius: 8px; background: #101924; box-shadow: 0 3px 16px #0003; }
+.match { width: 100px; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 18px; background: #bcec83; color: #172619; border-radius: 8px 0 0 8px; }
+.sport { font-size: 13px; font-weight: 850; letter-spacing: 1px; }
+.replay { font-size: 9px; letter-spacing: 2px; font-weight: 600; }
+.team { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 154px; padding: 0 18px; border-right: 1px solid #ffffff20; }
+.team span { font-size: 15px; font-weight: 650; letter-spacing: 1px; }
+.team strong { font-size: 38px; font-variant-numeric: tabular-nums; }
+.home { border-top: 3px solid #bcec83; }
+.away { border-top: 3px solid #91b9eb; }
+.time { min-width: 142px; padding: 9px 20px; display: flex; flex-direction: column; justify-content: center; }
+.time span { color: #9eafc2; font-size: 9px; letter-spacing: 1.5px; }
+.time strong { font-size: 31px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+#notice { position: absolute; top: calc(100% + 6px); right: 0; padding: 5px 9px; border-radius: 4px; background: #3e301bee; color: #ffdb9b; font-size: 10px; letter-spacing: 1px; }
+#notice[hidden] { display: none; }

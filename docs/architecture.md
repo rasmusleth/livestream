@@ -4,7 +4,7 @@
 
 Convert a camera view of a physical futsal scoreboard into digital scores and game time, suitable for a professional OBS graphic. The match camera remains a separate input to OBS.
 
-The first milestone is an offline verification tool. The next milestone is a live path that retains the same distinction between observations and confirmed state. The product name and broader production features remain open.
+The current milestone adds an OBS browser overlay driven by the offline verification player. The next milestone is a live path that retains the same distinction between observations and confirmed state. The product name and broader production features remain open.
 
 ## Implemented system
 
@@ -19,6 +19,9 @@ flowchart LR
     Data --> Server[Local Python HTTP server]
     Video --> Server
     Server --> View[Browser verification view]
+    View --> Position[POST replay position]
+    Position --> Shared[Server selects confirmed reading]
+    Shared --> Overlay[Transparent OBS browser overlay]
 ```
 
 | Component | Responsibility |
@@ -26,8 +29,9 @@ flowchart LR
 | `reader.py` | Probe source dimensions, decode sampled frames, measure calibrated LED segments, recognize digits, confirm observations, and write timestamped readings. |
 | `calibration.json` | Source dimensions, crop, sample rate, digit regions, and seven source-pixel probe centers per digit. |
 | `data/readings.json` | Generated metadata and observations, plus confirmed values, status, age, and segment diagnostics. Excluded from Git. |
-| `server.py` | Serve only the allowlisted viewer assets, generated readings, and the selected video on loopback; support byte-range video seeking. |
-| `web/` | Synchronize the precomputed readings with video playback and expose diagnostic information. |
+| `server.py` | Serve allowlisted assets and video on loopback, support byte-range seeking, and expose local replay-position and overlay-state endpoints. |
+| `playback.py` | Select confirmed observations by player position and track whether the publishing player is still connected. Never advance the match clock independently. |
+| `web/` | Show verification diagnostics, optionally publish playback position, and render a separate transparent overlay. |
 | `tests/` | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording. |
 
 The initial development target is macOS with Python 3.12; CI uses macOS 26. Other operating systems and Python versions are outside the current support scope.
@@ -42,9 +46,17 @@ Two successive matching non-null readings confirm the output. `values` contains 
 
 `confidence` is a normalized minimum distance from the segment threshold. It is not a probability of correctness. Raw readings can briefly resemble another valid digit during transitions; confirmation filters the observed single-sample glitches. It cannot guarantee correctness if an incorrect reading persists.
 
+### Replay overlay transport
+
+The operator explicitly enables replay output in the verification view. While enabled, it POSTs the video position to `/api/playback` every 100 ms, including while paused. The server selects the corresponding precomputed reading and exposes it at `/api/state`; the separate `/overlay` page polls that state every 100 ms. It does not download the video or recognize digits itself. The server rejects malformed, out-of-range, and cross-origin position updates.
+
+If the operator stops output or no update arrives for two seconds, the server marks delivery disconnected and preserves the last reading. The overlay displays a `DATA HELD` badge on disconnected delivery or source readings held for at least one second. Before the first confirmed reading it uses dashes. Server connection failures preserve the displayed values and show a connection warning. Paused video with an active heartbeat remains connected and keeps its exact clock value.
+
+State is in memory and resets on server restart. This proof of concept assumes one publishing operator tab; additional publishing tabs can overwrite each other's positions. The graphic is explicitly labelled `REPLAY`. Browser background throttling can trigger a held-data warning. See `docs/obs-overlay.md` for setup and limitations.
+
 ### Current limits
 
-This is an offline, batch process for a fixed 1920×1080 input and one-digit scores. Seeking uses the previously computed source timeline. It is not a live recognition engine and does not provide an OBS overlay, manual overrides, automatic calibration, or period recognition. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
+This is an offline, batch process for a fixed 1920×1080 input and one-digit scores. Seeking uses the previously computed source timeline. It is not a live recognition engine and does not provide manual overrides, automatic calibration, or period recognition. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
 
 ## Intended live architecture
 
@@ -74,7 +86,7 @@ Recorded replay should exercise the same recognition and state logic as live inp
 - **Local processing first:** use existing recordings without uploading footage or requiring a cloud service.
 - **Calibrated segment recognition first:** the supplied display has large, fixed LED digits. Broader recognition approaches need comparative evidence before adding complexity.
 - **Keep evidence reviewable:** timestamped raw observations, confirmation status, and source playback are part of the development workflow.
-- **OBS browser output is planned:** the transport from a live reader to that output is undecided. Choose it after measuring update needs and testing capture on macOS.
+- **OBS browser output works with recorded replay:** simple local HTTP polling provides the first transport. Integration and timing with a live reader remain undecided until capture is tested on macOS.
 - **Still to establish:** camera interface, acceptable end-to-end delay, multiple venues, higher scores, clock formats, manual override semantics, and loss/recovery behavior.
 
 Record significant later decisions with their context and tradeoffs in `docs/`. Update this document as boundaries become implemented.

@@ -67,7 +67,7 @@ Readings are precomputed from the recording at 10 samples per second and saved i
 
 `calibration.json` specifies the six digit regions and seven sample locations per digit, in source-image coordinates. The reader measures the bright LED strokes and decodes their segment patterns. Two consecutive matching samples are required before publishing a reading; otherwise the last confirmed values are held and labelled. A hold of one second or longer is marked stale.
 
-This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. Live capture, the OBS overlay, and manual overrides are not implemented yet.
+This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. A transparent OBS browser overlay can follow the verification player. Live capture and manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
 
 ### Validation
 

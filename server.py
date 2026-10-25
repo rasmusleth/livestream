@@ -6,13 +6,60 @@ import json
 import mimetypes
 import re
 
+from playback import PlaybackState
+
 ROOT = Path(__file__).resolve().parent
 
 
 class Handler(BaseHTTPRequestHandler):
+    def log_request(self, code='-', size='-'):
+        if self.path.startswith('/api/') and code == 200:
+            return
+        super().log_request(code, size)
+
+    def send_json(self, payload, status=200):
+        body = json.dumps(payload, allow_nan=False).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        if self.path != '/api/playback':
+            self.send_error(404)
+            return
+        # JSON plus an Origin check prevent a third-party page from controlling replay.
+        origin = self.headers.get('Origin')
+        if origin and origin != f"http://{self.headers.get('Host')}":
+            self.send_error(403)
+            return
+        try:
+            if self.headers.get('Content-Type') != 'application/json':
+                raise ValueError('Expected application/json')
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 1024:
+                raise ValueError('Invalid request size')
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict) or set(payload) != {'position'}:
+                raise ValueError('Expected a position field')
+            if payload['position'] is None:
+                self.server.playback.stop()
+            else:
+                self.server.playback.update(payload['position'])
+        except (ValueError, UnicodeDecodeError) as error:
+            self.send_json({'error': str(error)}, 400)
+            return
+        self.send_json(self.server.playback.snapshot())
+
     def do_GET(self):
         route = self.path.split('?')[0]
-        routes = {'/': ROOT / 'web/index.html', '/app.js': ROOT / 'web/app.js',
+        if route == '/api/state':
+            self.send_json(self.server.playback.snapshot())
+            return
+        routes = {'/overlay': ROOT / 'web/overlay.html', '/overlay.js': ROOT / 'web/overlay.js',
+                  '/overlay.css': ROOT / 'web/overlay.css', '/': ROOT / 'web/index.html', '/app.js': ROOT / 'web/app.js',
                   '/style.css': ROOT / 'web/style.css', '/readings.json': ROOT / 'data/readings.json',
                   '/video': self.server.video}
         path = routes.get(route)
@@ -66,6 +113,7 @@ if __name__ == '__main__':
         parser.error('Video filename does not match the analyzed recording.')
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     server.video = args.video.resolve()
+    server.playback = PlaybackState(metadata)
     print(f'Open http://127.0.0.1:{args.port} — Ctrl+C to stop', flush=True)
     try:
         server.serve_forever()
