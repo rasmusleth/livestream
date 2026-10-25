@@ -51,3 +51,28 @@ Workflow files define checks; GitHub branch protection is a separate repository 
 ## Agent work
 
 `AGENTS.md` is the entry point for coding agents. It describes scope, correctness rules, dependencies, and verification. Keep task-specific plans in the issue or PR, and keep durable decisions in repository docs. Agent output should name checks that ran, checks that were skipped, and remaining uncertainty.
+
+## Publish this setup manually
+
+The workflow branch is intentionally local at handoff. The prototype checkpoint is already backed up on GitHub. No pull request or branch protection has been created by this setup task, and hosted CI has not been run yet.
+
+The GitHub CLI login already has `workflow` permission. The initial HTTPS push used a different stored Git credential, which lacked that permission. To configure Git to use the CLI login and publish this branch yourself:
+
+```sh
+cd /Users/rasmuswleth/repos/livestream
+git switch chore/repository-workflow
+gh auth setup-git --hostname github.com
+git push -u origin chore/repository-workflow
+```
+
+`gh auth setup-git` changes Git's credential helper configuration for GitHub to use the existing CLI login. See the [GitHub CLI documentation](https://cli.github.com/manual/gh_auth_setup-git).
+
+Then:
+
+1. Open a PR with base `main` and compare branch `chore/repository-workflow`. The PR includes the prototype and workflow setup; keep it as a draft while reviewing.
+2. Wait for the matrix checks and final `CI` result. Resolve failures before treating the hosted workflow as verified.
+3. In repository **Settings → Branches**, add a classic branch protection rule for `main`.
+4. Require a pull request and the `CI` status check, and require the branch to be up to date. Leave required approving reviews disabled while you are the only maintainer. Keep force pushes and deletion disabled; apply the rule to administrators too if you want the same workflow for your own changes.
+5. Review the diff and merge when you are ready. After merge, the main-branch workflow will run again and Dependabot can discover the configuration on the default branch.
+
+GitHub's [branch protection documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule) describes these settings. Branch rules remain a separate manual step; merely committing the CI YAML does not enforce them.
