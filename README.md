@@ -49,3 +49,42 @@ Inspect the footage before choosing a recognition approach or application stack.
 Team names and branding, periods, fouls, timeouts, player information, sponsor graphics, and broader match production controls could be added later. These are possibilities rather than requirements for the first version.
 
 The product name and broader scope can stay open while the scoreboard workflow is proven.
+
+## Run the first prototype
+
+Initial development target: macOS with Python 3.12. Requirements: `ffmpeg` / `ffprobe` on your PATH. No Python packages or cloud services are needed.
+
+From the project folder:
+
+```sh
+python3 reader.py scoreboard-2-min-clip.mp4
+python3 server.py
+```
+
+Open [the local verification view](http://127.0.0.1:8765). Play or seek through the recording to compare the camera image with the extracted clock and scores. The “Jump to second” control makes it easy to inspect specific moments. Stop the server with Ctrl+C.
+
+Readings are precomputed from the recording at 10 samples per second and saved in `data/readings.json`. The viewer follows the video's playback position, including when seeking backward. It does not read live frames in the browser. The original video is unchanged.
+
+`calibration.json` specifies the six digit regions and seven sample locations per digit, in source-image coordinates. The reader measures the bright LED strokes and decodes their segment patterns. Two consecutive matching samples are required before publishing a reading; otherwise the last confirmed values are held and labelled. A hold of one second or longer is marked stale.
+
+This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. Live capture, the OBS overlay, and manual overrides are not implemented yet.
+
+### Validation
+
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+Generate readings before running recording regression checks. See [VALIDATION.md](VALIDATION.md) for the first clip's results and limits. Video files and generated readings are excluded from Git.
+
+## Contributing and repository guidance
+
+Read [AGENTS.md](AGENTS.md) for coding-agent instructions, [the architecture document](docs/architecture.md) for implemented and proposed boundaries, and [the development workflow](docs/development.md) for branches, PRs, and CI.
+
+Run the shared local and CI checks with:
+
+```sh
+python3 scripts/check.py
+```
+
+These checks include a generated-video pipeline test without needing the match recording. Real-recording regression checks additionally run when local generated readings exist.
