@@ -9,7 +9,7 @@ import sys
 import subprocess
 import tempfile
 
-from calibration import validate_profile, inspect_preview
+from calibration import validate_profile, inspect_preview, align_profile
 from capture import camera_command, capture_rows, recording_command
 from live import ContinuousState, InputWorker
 
@@ -34,7 +34,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        if self.path in ('/api/calibration/test', '/api/calibration/save'):
+        if self.path in ('/api/calibration/test', '/api/calibration/save', '/api/calibration/align'):
             source = getattr(self.server, 'source', None)
             if source is None:
                 self.send_error(404)
@@ -47,7 +47,13 @@ class Handler(BaseHTTPRequestHandler):
                 length = int(self.headers.get('Content-Length', '0'))
                 if self.headers.get('Content-Type') != 'application/json' or not 0 < length <= 16384:
                     raise ValueError('Expected a JSON profile up to 16 KiB')
-                profile = validate_profile(json.loads(self.rfile.read(length)), self.server.calibration)
+                payload = json.loads(self.rfile.read(length))
+                if self.path.endswith('/align'):
+                    if not isinstance(payload, dict) or set(payload) != {'corners'}:
+                        raise ValueError('Expected four panel corners')
+                    self.send_json({'config': align_profile(self.server.calibration, payload['corners'])})
+                    return
+                profile = validate_profile(payload, self.server.calibration)
                 if self.path.endswith('/test'):
                     preview = source.preview_snapshot()
                     if preview is None:

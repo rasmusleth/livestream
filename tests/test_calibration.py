@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
-from calibration import FIELDS, inspect_preview, validate_profile
+from calibration import FIELDS, inspect_preview, validate_profile, align_profile
 from reader import FrameReader, PATTERNS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +36,44 @@ class CameraCalibration(unittest.TestCase):
         FrameReader(result)
         self.assertEqual(self.reference['crop'], [600, 500, 850, 360])
 
+    def test_panel_identity_preserves_all_probes_and_outline(self):
+        result = align_profile(self.reference, self.reference['board_corners'])
+        self.assertEqual(result['segment_centers'], self.reference['segment_centers'])
+        self.assertEqual(result['digits'], self.reference['digits'])
+        self.assertEqual(result['board_corners'], self.reference['board_corners'])
+        self.assertEqual(validate_profile(result, self.reference), result)
+
+    def test_panel_homography_matches_independent_perspective_warp(self):
+        def expected(point):
+            x, y = point
+            denominator = 1 + .00012*x + .00008*y
+            return [(x*.85+y*.03+70)/denominator, (x*.02+y*.88+25)/denominator]
+        corners = [[round(v) for v in expected(point)] for point in self.reference['board_corners']]
+        before = deepcopy(self.reference)
+        result = align_profile(self.reference, corners)
+        for name in FIELDS:
+            for actual, source in zip(result['segment_centers'][name], before['segment_centers'][name]):
+                for a, e in zip(actual, expected(source)):
+                    self.assertAlmostEqual(a, e, delta=1.5)
+        self.assertEqual(self.reference, before)
+        self.assertEqual(align_profile(self.reference, corners), result)
+        self.assertEqual(result['board_corners'], corners)
+        self.assertEqual(validate_profile(result, self.reference)['board_corners'], corners)
+
+    def test_panel_rejects_bad_corners_and_legacy_profiles(self):
+        for corners in ([], [[1, 1]]*4, [[20, 20], [80, 80], [80, 20], [20, 80]],
+                        [[-1, 10], [100, 10], [100, 100], [10, 100]],
+                        [[10, 10], [20, 10], [30, 10], [40, 10]],
+                        [[True, 10], [100, 10], [100, 100], [10, 100]]):
+            with self.subTest(corners=corners), self.assertRaises(ValueError):
+                align_profile(self.reference, corners)
+        legacy = deepcopy(self.reference)
+        legacy.pop('board_corners')
+        with self.assertRaisesRegex(ValueError, 'legacy'):
+            align_profile(legacy, self.reference['board_corners'])
+        with self.assertRaises(ValueError):
+            validate_profile({**self.reference, 'board_corners': []}, self.reference)
+
     def test_moved_digits_recognize_only_after_recalibration(self):
         shifted = deepcopy(self.reference)
         # A new camera position: shrink, translate, and shear each source point.
@@ -46,7 +84,8 @@ class CameraCalibration(unittest.TestCase):
             right, bottom = transform(x+w, y+h)
             shifted['digits'][name] = [left, top, right-left, bottom-top]
             shifted['segment_centers'][name] = [transform(*point) for point in shifted['segment_centers'][name]]
-        profile = validate_profile(shifted, self.reference)
+        shifted['board_corners'] = [transform(*point) for point in self.reference['board_corners']]
+        profile = align_profile(self.reference, shifted['board_corners'])
         width, height = [v//2 for v in profile['reference_size']]
         pixels = bytearray(width*height*3)
         expected = dict(zip(FIELDS, [1, 9, 5, 9, 2, 3]))

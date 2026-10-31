@@ -112,7 +112,13 @@ Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overl
 
 ### Adapt calibration to a new camera position
 
-Open **Calibrate this camera setup** in the continuous monitor. Select each of the six digits and mark its outer corners in order: top left, top right, bottom right, bottom left. This freezes the preview and places seven probes inside the outline, allowing a moved, resized, or skewed digit. Adjust individual probes onto the centers of the LED strokes, including currently unlit strokes. Preview zoom and source-pixel coordinate inputs help with fine placement. If available, an all-segments-lit scoreboard test display makes alignment easier.
+Open **Calibrate this camera setup** in the continuous monitor and choose **Align whole scoreboard · 4 corners**. The preview freezes. Mark the outer corners of the **central panel containing the clock and both scores**, excluding the numbered side panels, in this order: top left, top right, bottom right, bottom left. The on-screen schematic identifies the panel. For rounded corners, click where the straight edges would meet.
+
+Those four clicks apply a perspective transform to all six digit regions and all 42 probes using this scoreboard's known layout. Repeating alignment replaces the draft from the active profile, so transformations do not accumulate. This maps known positions; it does not detect letters, find digits independently, or track motion.
+
+Use **Fine adjustments (optional)** only where needed: mark a single digit's corners or place an individual probe onto the center of its LED stroke, including an unlit stroke. Preview zoom and source-pixel coordinate inputs help with fine placement. If available, an all-segments-lit scoreboard test display makes alignment easier.
+
+The tracked reference profile includes the central panel outline. Newly saved profiles retain their mapped outline for the next setup. Older local profiles without `board_corners` still support per-digit editing; to use whole-panel alignment, restart with `--calibration calibration.json` and align from that reference.
 
 **Check against latest frame** reports each digit and its segment levels without changing the overlay. It uses the latest server preview, even if the browser image is frozen; it is a diagnostic observation, not a confirmed reading. Preview resampling can differ from the final crop/scale path. Verify recognized values against the physical scoreboard after activating the profile.
 

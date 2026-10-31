@@ -94,7 +94,7 @@ class OverlayHTTP(unittest.TestCase):
     def test_preview_endpoints_are_read_only_and_continuous_only(self):
         for route in ('/api/preview', '/api/calibration'):
             self.assertEqual(self.request('GET', route)[0], 404)
-        for route in ('/api/calibration/test', '/api/calibration/save'):
+        for route in ('/api/calibration/test', '/api/calibration/save', '/api/calibration/align'):
             self.assertEqual(self.request('POST', route, '{}')[0], 404)
         self.server.source = ContinuousState('recording', 'fixture')
         self.server.calibration = {'reference_size': [2, 2]}
@@ -138,8 +138,17 @@ class OverlayHTTP(unittest.TestCase):
         status, _, body = self.request('POST', '/api/calibration/save', json.dumps(reference), headers)
         self.assertEqual(status, 200)
         self.assertFalse(json.loads(body)['active'])
+        status, _, body = self.request('POST', '/api/calibration/align',
+            json.dumps({'corners': reference['board_corners']}), headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['config']['segment_centers'], reference['segment_centers'])
+        self.assertEqual(self.request('POST', '/api/calibration/align', '{}', headers)[0], 400)
+        self.assertEqual(self.request('POST', '/api/calibration/align',
+            json.dumps({'corners': reference['board_corners']}),
+            {**headers, 'Origin': 'https://example.org'})[0], 403)
         saved = json.loads(self.server.profile_output.read_text())
         self.assertEqual(saved['segment_centers'], reference['segment_centers'])
+        self.assertEqual(saved['board_corners'], reference['board_corners'])
         before = self.server.profile_output.read_bytes()
         self.assertEqual(self.request('POST', '/api/calibration/save', '{}', headers)[0], 400)
         self.assertEqual(self.server.profile_output.read_bytes(), before)
