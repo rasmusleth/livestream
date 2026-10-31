@@ -67,6 +67,8 @@ async function loadGuides() {
       for (const [x, y] of centers) shape('probe-guides', 'circle', {cx: x, cy: y, r: 5, fill: '#ffdf72', stroke: '#171d24', 'stroke-width': 2}, name);
     }
     $('profile').textContent = `Calibration: ${profile} · expected input ${config.reference_size.join(' × ')} · preview up to 2 fps`;
+    window.calibrationData = {profile, config};
+    window.dispatchEvent(new CustomEvent('calibration-loaded', {detail: window.calibrationData}));
   } catch {
     $('profile').textContent = 'Calibration guides unavailable. Reload the monitor to retry.';
   }
@@ -95,6 +97,7 @@ async function refreshPreview() {
     previewFrame = {age, received: performance.now()};
     previewError = '';
     $('freeze').disabled = false;
+    window.dispatchEvent(new Event('preview-ready'));
   } catch { previewError = 'Preview connection lost'; }
   finally { showPreviewStatus(); setTimeout(refreshPreview, 500); }
 }

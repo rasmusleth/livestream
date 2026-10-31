@@ -66,7 +66,15 @@ Missing frames become disconnected after two seconds, and confirmation age incre
 
 Continuous modes use one FFmpeg decoder and split each decoded input into a half-resolution display image and the original crop/scale recognition path. Both branches convert to RGB24 and are packed vertically into one raw output frame; Python extracts the recognition pixels and retains only the latest preview, published at most twice per second. The input is never opened twice. Reference dimensions and crop coordinates/sizes must be even integers and the crop must fit the source.
 
-The monitor draws the active profile's six digit regions and 42 segment centers over a canvas. Read-only `/api/calibration` and uncached binary `/api/preview` are available only in continuous modes. Preview age remains explicit after EOF, failure, or a browser freeze. Freezing affects presentation only; recognition and confirmed-state delivery continue. Calibration editing and saving images are not implemented. Preview is slower than recognition and is not synchronized for frame-by-frame accuracy review.
+The monitor draws the active profile's six digit regions and 42 segment centers over a canvas. `GET /api/calibration` and uncached binary `/api/preview` are available only in continuous modes. Preview age remains explicit after EOF, failure, or a browser freeze. Freezing affects presentation only; recognition and confirmed-state delivery continue. The monitor can edit a draft calibration; saving images is not implemented. Preview is slower than recognition and is not synchronized for frame-by-frame accuracy review.
+
+### Local camera calibration
+
+`web/calibrate.js` lets the operator mark four ordered convex corners for each digit. Bilinear interpolation places a standard seven-segment template inside that outline; individual probes can be placed by clicking or entering integer source coordinates. This accommodates translation, scale, rotation, and modest skew through manual setup. It is not automatic detection, tracking, or exact perspective rectification. A strongly distorted digit may need individual probe adjustments.
+
+`calibration.py` validates six digit boxes and seven bounded probes per digit against the active resolution, preserves the active sample rate, derives an even crop around the probes, and constructs a `FrameReader` before accepting the profile. `POST /api/calibration/test` inspects the latest server preview once and returns per-digit diagnostics; it never publishes or confirms output. Preview resampling differs from the production crop/scale path, so this check does not substitute for validation after activation.
+
+`POST /api/calibration/save` atomically replaces the fixed ignored `data/calibration.local.json` destination. Request-provided file paths and crop/filter geometry are not used. Both POST endpoints require JSON, bound request size, reject mismatched Origins, and are disabled in replay mode. Edits and saves leave the in-memory profile and current confirmed state unchanged. Restarting with `--calibration data/calibration.local.json` deliberately activates the new crop and probes in one capture process; confirmation starts with no values and requires fresh evidence. The reference `calibration.json` is preserved. Local profile saving overwrites the previous local save, not a versioned profile library.
 
 ### Current limits
 

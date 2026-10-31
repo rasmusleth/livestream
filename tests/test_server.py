@@ -94,6 +94,8 @@ class OverlayHTTP(unittest.TestCase):
     def test_preview_endpoints_are_read_only_and_continuous_only(self):
         for route in ('/api/preview', '/api/calibration'):
             self.assertEqual(self.request('GET', route)[0], 404)
+        for route in ('/api/calibration/test', '/api/calibration/save'):
+            self.assertEqual(self.request('POST', route, '{}')[0], 404)
         self.server.source = ContinuousState('recording', 'fixture')
         self.server.calibration = {'reference_size': [2, 2]}
         self.server.calibration_name = 'fixture.json'
@@ -110,6 +112,41 @@ class OverlayHTTP(unittest.TestCase):
         self.assertEqual(json.loads(self.request('GET', '/api/calibration')[2]),
                          {'profile': 'fixture.json', 'config': self.server.calibration})
         self.assertEqual(self.request('POST', '/api/calibration', '{}')[0], 404)
+
+    def test_profile_validation_save_and_test_never_change_active_output(self):
+        reference = json.loads((Path(__file__).resolve().parents[1] / 'calibration.json').read_text())
+        self.server.source = ContinuousState('recording', 'fixture')
+        self.server.source.update(dataset()['readings'][1])
+        self.server.calibration = reference
+        self.server.profile_output = Path(self.temporary.name) / 'profiles/local.json'
+        if self.server.profile_output.exists():
+            self.server.profile_output.unlink()
+        headers = {'Content-Type': 'application/json'}
+        status, _, _ = self.request('POST', '/api/calibration/test', json.dumps(reference), headers)
+        self.assertEqual(status, 409)
+        self.server.source.update_preview(bytes(960*540*3), 960, 540)
+        status, _, body = self.request('POST', '/api/calibration/test', json.dumps(reference), headers)
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)['confirmed'])
+        self.assertIsNone(json.loads(body)['raw'])
+        self.assertFalse(self.server.profile_output.exists())
+        self.assertEqual(self.request('POST', '/api/calibration/save', json.dumps(reference),
+            {**headers, 'Origin': 'https://example.org'})[0], 403)
+        self.assertFalse(self.server.profile_output.exists())
+        self.assertEqual(self.request('POST', '/api/calibration/save', '{}', headers)[0], 400)
+        self.assertEqual(self.request('POST', '/api/calibration/save', json.dumps(reference), {})[0], 400)
+        status, _, body = self.request('POST', '/api/calibration/save', json.dumps(reference), headers)
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)['active'])
+        saved = json.loads(self.server.profile_output.read_text())
+        self.assertEqual(saved['segment_centers'], reference['segment_centers'])
+        before = self.server.profile_output.read_bytes()
+        self.assertEqual(self.request('POST', '/api/calibration/save', '{}', headers)[0], 400)
+        self.assertEqual(self.server.profile_output.read_bytes(), before)
+        self.assertEqual(self.server.calibration, reference)
+        self.assertEqual(self.server.source.snapshot()['values']['clock'], '19:59')
+        self.assertEqual(self.request('GET', '/data/calibration.local.json')[0], 404)
+        self.assertEqual(list(self.server.profile_output.parent.glob('*.tmp')), [])
 
     def test_video_ranges_still_allow_seeking(self):
         status, headers, body = self.request('GET', '/video', headers={'Range': 'bytes=2-5'})

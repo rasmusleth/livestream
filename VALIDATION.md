@@ -63,3 +63,12 @@ Continuous modes now expose a half-resolution preview with the active calibratio
 All 32 local tests pass, including generated-video equivalence with preview enabled, immutable/latest-only preview storage, preview age after EOF, resolution guards, read-only HTTP routes, and the five recording regressions. Browser checks cover preview loading, guide toggles, freezing/resuming while recognition continues, uncertain-reading status, and independent overlay output. Continuous mode does not support seeking; the existing replay mode retains it.
 
 No capture device was opened for this preview milestone. Preview performance and alignment against the actual live camera, capture-rate selection, single-owner OBS integration, and end-to-end delay still need hardware validation. The preview is limited to two updates per second and is not synchronized with every recognized frame. There is no calibration editor or frame export.
+
+
+## Camera calibration editor: 2026-10-31
+
+The user reports that the live camera preview works through the capture device, but no complete scoreboard reading has been confirmed with the reference calibration. This establishes preview delivery for that setup, not recognition accuracy. Fixed probe geometry is a likely cause; exposure, LED flicker, and other conditions have not been ruled out.
+
+The local editor adds per-digit four-corner placement, interpolated segment probes, precise probe adjustment, single-frame diagnostics, and a saved profile that is activated by restarting the server. Automated tests cover shifted/scaled/sheared synthetic digit geometry, rejection of incomplete/out-of-bounds profiles, derived crops, confirmation requiring fresh repeated evidence, diagnostic-only checks, and local saving without changing active output. All 36 local tests pass, including the five supplied-recording regressions. Regenerating the original clip still yields 1,638 observations and 52 uncertain raw readings.
+
+Browser checks with recorded input covered editor initialization, four-corner placement, numeric probe adjustment, discard, single-frame per-digit diagnostics, local save feedback, and unchanged running output during edits. A server started with the browser-saved profile received and confirmed recorded observations. No new hardware capture was opened. Actual live calibration and recognition remain to be tested by the operator. Standard probe interpolation and preview-frame checks are alignment aids; they are not an accuracy claim or automatic camera tracking.

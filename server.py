@@ -7,7 +7,9 @@ import mimetypes
 import re
 import sys
 import subprocess
+import tempfile
 
+from calibration import validate_profile, inspect_preview
 from capture import camera_command, capture_rows, recording_command
 from live import ContinuousState, InputWorker
 
@@ -32,6 +34,45 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        if self.path in ('/api/calibration/test', '/api/calibration/save'):
+            source = getattr(self.server, 'source', None)
+            if source is None:
+                self.send_error(404)
+                return
+            origin = self.headers.get('Origin')
+            if origin and origin != f"http://{self.headers.get('Host')}":
+                self.send_error(403)
+                return
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if self.headers.get('Content-Type') != 'application/json' or not 0 < length <= 16384:
+                    raise ValueError('Expected a JSON profile up to 16 KiB')
+                profile = validate_profile(json.loads(self.rfile.read(length)), self.server.calibration)
+                if self.path.endswith('/test'):
+                    preview = source.preview_snapshot()
+                    if preview is None:
+                        self.send_json({'error': 'No preview frame available'}, 409)
+                        return
+                    self.send_json(inspect_preview(profile, preview))
+                else:
+                    # Fixed ignored destination; the in-memory and tracked profiles stay unchanged.
+                    target = self.server.profile_output
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with tempfile.NamedTemporaryFile(mode='w', dir=target.parent, prefix='.calibration-',
+                                                     suffix='.json.tmp', delete=False) as output:
+                        temporary = Path(output.name)
+                        output.write(json.dumps(profile, indent=2) + '\n')
+                    try:
+                        temporary.replace(target)
+                    finally:
+                        temporary.unlink(missing_ok=True)
+                    self.send_json({'saved': str(target), 'active': False,
+                                    'message': 'Saved locally. Restart the server with --calibration ' + str(target)})
+            except (ValueError, TypeError, KeyError, UnicodeDecodeError) as error:
+                self.send_json({'error': str(error)}, 400)
+            except OSError:
+                self.send_json({'error': 'Could not save the local profile'}, 500)
+            return
         if self.path != '/api/playback':
             self.send_error(404)
             return
@@ -99,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(state)
             return
         continuous = getattr(self.server, 'source', None) is not None
-        routes = {'/monitor.js': ROOT / 'web/monitor.js', '/overlay': ROOT / 'web/overlay.html', '/overlay.js': ROOT / 'web/overlay.js',
+        routes = {'/monitor.js': ROOT / 'web/monitor.js', '/calibrate.js': ROOT / 'web/calibrate.js', '/overlay': ROOT / 'web/overlay.html', '/overlay.js': ROOT / 'web/overlay.js',
                   '/overlay.css': ROOT / 'web/overlay.css', '/': ROOT / ('web/monitor.html' if continuous else 'web/index.html'), '/app.js': ROOT / 'web/app.js',
                   '/style.css': ROOT / 'web/style.css', '/readings.json': None if continuous else ROOT / 'data/readings.json',
                   '/video': self.server.video}
@@ -178,6 +219,7 @@ if __name__ == '__main__':
     server.source = source
     server.calibration = config if source else None
     server.calibration_name = args.calibration.name
+    server.profile_output = ROOT / 'data/calibration.local.json'
     print(f'Open http://127.0.0.1:{args.port} — mode: {args.mode} — Ctrl+C to stop', flush=True)
     if worker:
         worker.start()
