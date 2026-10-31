@@ -1,6 +1,6 @@
 # Offline recognition comparison
 
-The experiment favors a rectified whole-digit reader over the current fixed probes and the tested off-the-shelf Tesseract configuration. It is **not enabled in the server or OBS overlay**. The candidate still has failure cases, including a wrong score under a deliberate 10-pixel alignment error, so increased coverage is not a production accuracy claim.
+The experiment favors a rectified whole-digit reader over the current fixed probes and the tested off-the-shelf Tesseract configuration. It is **not enabled in the server or OBS overlay**. The initial comparison below is historical evidence from PR #8. The [glyph safety follow-up](#glyph-safety-follow-up) fixes its known shifted-score example, with a substantial coverage cost. Neither result establishes production accuracy.
 
 ## Inputs and method
 
@@ -89,3 +89,34 @@ Proceed with whole-region recognition in an opt-in shadow mode first. Preserve t
 - Obtain more labelled sequences and separate footage after tuning; include score changes, pauses, exposure/flicker changes, small zoom/rotation errors, and end-to-end live delay.
 
 The current reference reader and runtime overlay behavior are unchanged by this PR.
+
+## Glyph safety follow-up
+
+The first implementation stage from [the handoff](handoff-region-reader.md) changes only the offline candidate. Region extraction adds a vertical guard of 12% of the box height and a smaller horizontal guard of 4% of its width, rounded upward. The original probe-era boxes can cut through the top stroke even at nominal alignment; equal padding in both directions admitted adjacent colon/digit foreground. These guard sizes were selected using the existing development footage, not an independent test set.
+
+Before normalization, the candidate now requires two clear pixels around the foreground. Boundary contact, short or weak foreground, ambiguous segment patterns, borderline width/height ratios (0.50–0.55), and strongly capped narrow shapes remain unknown. Narrow `1` candidates require the 90th-percentile active row width to be at most 2.2 times the median; this accommodates this display's serif while rejecting the synthetic narrow `7` case. These are conservative shape heuristics, not guarantees against all `1`/`7`/`9` confusion or interior occlusion. A small nonempty fragment is unknown; only a mask with no retained foreground is labelled blank. Thresholding or component removal can still erase a glyph, so blank is not yet sufficient evidence for a safe clock-format change.
+
+Local reports include per-digit value, reason, foreground bounds and segment levels, plus guard configuration. The stress tool now evaluates 11-sample windows (±0.5 s at 10 Hz) around each existing heldout anchor, with separate confirmation history for each window and translation. Only the reviewed anchor carries expected full-reading truth; neighbouring frames are not silently assigned its clock or score. These reused anchors are regression evidence, not a new holdout. `--sequence-radius 0` retains single-frame evaluation; `--skip-ocr` avoids unnecessary Tesseract calls.
+
+Both recordings were rerun with Regions only, preserving the original reports in separate ignored files. OCR was not rerun; its shared foreground preprocessing has changed, so the historical OCR numbers above are not results for the updated masks.
+
+| Recording | Complete raw before → after | Fresh confirmations after | Reviewed raw correct / wrong / unknown after |
+| --- | --- | --- | --- |
+| Original | 1,614 → 1,559 / 1,638 (95.2%) | 1,446 / 1,638 | 10 / 0 / 1 |
+| New | 372 → 224 / 514 (43.6%) | 168 / 514 | 6 / 0 / 9 |
+
+There were zero wrong fresh confirmations at the existing reviewed timestamps. The longest interval without fresh confirmation increased to 1.1 s on the original and 17.3 s on the new recording. These coverage losses are material: this version favors rejection and remains unsuitable for enabling output. The original runtime reader still yields 1,638 observations with 52 uncertain raw readings.
+
+Across the eight reused stress anchors, complete raw results were:
+
+| Source-image shift | Cases | Correct / wrong / unknown |
+| --- | --- | --- |
+| None | 8 | 6 / 0 / 2 |
+| ±5 px horizontally or vertically | 32 | 18 / 0 / 14 |
+| ±10 px horizontally or vertically | 32 | 12 / 0 / 20 |
+
+The known new-clip 32.5 s / 10-pixel upward shift now returns `07:57`, home `0`, away `1`, matching its existing label. The away glyph reads `1` in all 11 samples from 32.0 through 33.0 s under that shift. A local montage of the exact sampled unshifted frames was inspected: away remains `1` throughout, while the clock changes between 32.2 and 32.3 s. The shifted complete observation is unknown in four samples and available in seven; the existing confirmation rule first accepts the complete `07:57`, `0–1` at 32.4 s. This fixes the reported persistent-score hazard in that window, not arbitrary cropped digits or other sequences.
+
+Validation: the original recording was regenerated; the application check passed all 39 tests, including its five private-recording regressions. The optional experiment suite passed 12 tests, including four crop boundaries, narrow `7`, ambiguous aspect, fragments versus blanks, larger-shift rejection, guard recovery and held values during repeated rejected input. The first application-check attempt was blocked from binding its HTTP test socket by the sandbox; the full rerun with loopback permission passed. No UI code changed, so no new monitor demonstration was performed. No camera was opened or existing server stopped/restarted.
+
+Explicit clock-format safeguards, independent field confirmation (including observed tenths progression), and monitor shadow integration remain unimplemented. The all-fields identical-repeat rule still cannot reliably confirm a running tenths clock. No candidate value drives OBS, and no ticks are generated during missing input. Rotation, zoom, exposure, flicker, more independently reviewed sequences, and hardware/end-to-end delay remain unvalidated.

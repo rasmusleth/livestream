@@ -10,7 +10,7 @@ python3 -m venv /tmp/livestream-recognition-venv
 /tmp/livestream-recognition-venv/bin/python -m unittest discover -s experiments -p 'test_*.py' -v
 ```
 
-OpenCV/NumPy are optional experiment dependencies, not application requirements. The standard repository check compiles these files without importing them; it runs the existing application tests. The seven experiment tests require this environment and are run separately.
+OpenCV/NumPy are optional experiment dependencies, not application requirements. The standard repository check compiles these files without importing them; it runs the existing application tests. The 12 experiment tests require this environment and are run separately.
 
 Keep recordings, local profiles, labels, and outputs in ignored local paths. The original benchmark uses tracked `calibration.json`; the new one needs the saved profile matching its framing. Preserve a copy of that profile before further edits. Our local copy is `data/recognition-live-calibration.json`; do not substitute a calibration made for another framing.
 
@@ -25,20 +25,22 @@ Labels are visually inspected values for exact FFmpeg sample indices on a 10 Hz 
 The supplied local annotation files and all output reports are ignored. They are not downloaded or checked into CI. Run the full comparisons:
 
 ```sh
-/tmp/livestream-recognition-venv/bin/python experiments/compare_readers.py scoreboard-2-min-clip.mp4 --calibration calibration.json --labels data/recognition-original-labels.json --output data/recognition-original-final.json
-/tmp/livestream-recognition-venv/bin/python experiments/compare_readers.py scoreboard-live-test-01.mkv --calibration data/recognition-live-calibration.json --labels data/recognition-live-labels.json --output data/recognition-live-final.json
-python3 experiments/summarize_results.py data/recognition-original-final.json data/recognition-live-final.json
+/tmp/livestream-recognition-venv/bin/python experiments/compare_readers.py scoreboard-2-min-clip.mp4 --calibration calibration.json --labels data/recognition-original-labels.json --output data/recognition-original-glyph-safety.json --skip-ocr
+/tmp/livestream-recognition-venv/bin/python experiments/compare_readers.py scoreboard-live-test-01.mkv --calibration data/recognition-live-calibration.json --labels data/recognition-live-labels.json --output data/recognition-live-glyph-safety.json --skip-ocr
+python3 experiments/summarize_results.py data/recognition-original-glyph-safety.json data/recognition-live-glyph-safety.json
 ```
 
-`--limit N` limits candidate output for development (the baseline is still decoded fully); `--skip-ocr` permits faster Regions-only development; `--ocr-psm 7` compares an alternate OCR line mode. A missing/broken OCR tool fails the run rather than reporting an empty result as successful. Tesseract errors are not swallowed. Reports include input SHA-256, the exact calibration/template/labels, tool versions, raw and confirmed timelines, held ages, reviewed correctness counts, and candidate processing times. These are batch experiments; coverage is not accuracy and timing excludes candidate decoding/capture/OBS delivery.
+These output names preserve the original `*-final.json` comparison evidence. Remove `--skip-ocr` to rerun OCR against the updated shared masks (the historical OCR results do not apply to these masks). `--limit N` limits candidate output for development (the baseline is still decoded fully); `--ocr-psm 7` compares an alternate OCR line mode. A missing/broken OCR tool fails the run rather than reporting an empty result as successful. Tesseract errors are not swallowed. Reports include input SHA-256, the exact calibration/template/labels, tool versions, raw and confirmed timelines, held ages, reviewed correctness counts, candidate processing times, region guard configuration and per-digit rejection evidence. These are batch experiments; coverage is not accuracy and timing excludes candidate decoding/capture/OBS delivery.
 
-Stress-test only labels marked `heldout`, using the same pixel translations for both candidates:
+Stress-test windows around labels marked `heldout`, using the same pixel translations for each sample:
 
 ```sh
-/tmp/livestream-recognition-venv/bin/python experiments/stress_readers.py scoreboard-live-test-01.mkv --calibration data/recognition-live-calibration.json --labels data/recognition-live-labels.json --output data/recognition-live-stress.json
-/tmp/livestream-recognition-venv/bin/python experiments/stress_readers.py scoreboard-2-min-clip.mp4 --calibration calibration.json --labels data/recognition-original-labels.json --output data/recognition-original-stress.json
+/tmp/livestream-recognition-venv/bin/python experiments/stress_readers.py scoreboard-live-test-01.mkv --calibration data/recognition-live-calibration.json --labels data/recognition-live-labels.json --output data/recognition-live-glyph-safety-stress.json --skip-ocr
+/tmp/livestream-recognition-venv/bin/python experiments/stress_readers.py scoreboard-2-min-clip.mp4 --calibration calibration.json --labels data/recognition-original-labels.json --output data/recognition-original-glyph-safety-stress.json --skip-ocr
 ```
 
-No images or audio are saved by these scripts. Numeric output files may be large; keep them ignored. The Regions prototype and OCR baseline still make mistakes. Neither is wired into production input or the overlay.
+The default `--sequence-radius 5` includes up to five samples before and after each reviewed anchor (11 samples at an interior anchor). `--sequence-radius 0` reproduces the former single-frame procedure. Each window/offset has separate confirmation history. Only its anchor has expected full-reading truth; `correct: null` on neighbouring samples means unlabelled, not correct. Use `raw` and `evidence` to distinguish unavailable observations from unlabelled available ones. Output adds source `t`, `anchor_t`, candidate digits, per-digit reasons, confirmed values, status and source-relative held age. Remove `--skip-ocr` to include OCR. Existing heldout anchors are now reused regression checks, not independent validation of the hardened reader.
+
+No images or audio are saved by these scripts. Numeric output files may be large; keep them ignored. The Regions prototype and OCR baseline still make mistakes. Neither is wired into production input or the overlay. See [the safety follow-up](../docs/recognition-comparison.md#glyph-safety-follow-up) for the fixed shifted-score case and the substantial coverage loss from conservative rejection.
 
 The shared two-identical-observation rule is intentionally retained for comparison. It can fail on a perfectly recognized running tenths clock at 10 Hz. See the report before reusing this confirmation helper in a live reader.

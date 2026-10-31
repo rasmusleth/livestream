@@ -2,6 +2,8 @@
 
 Prepared 2026-10-31. The user agreed to pursue whole-region recognition, beginning with an opt-in shadow mode. This document records the next task; it does not mean that task is implemented. Read `AGENTS.md`, `README.md`, `docs/architecture.md`, `VALIDATION.md`, and `docs/development.md` before changing code.
 
+Follow-up: the first offline glyph-safety stage is now implemented on `codex/region-glyph-safety`; see [evidence and coverage costs](recognition-comparison.md#glyph-safety-follow-up). The known shifted-score window is fixed, with conservative rejection elsewhere. The remaining stages below—explicit safe clock formats, independent field/tenths confirmation, and monitor shadow integration—are still pending. The preparation-time checkout/PR details below describe the starting point.
+
 ## Goal and current position
 
 Make the reader tolerate ordinary setup differences without positioning 42 tiny probes perfectly. Keep processing local and use the reader as the sole owner of the scoreboard capture device. OBS receives digital output through its browser overlay.

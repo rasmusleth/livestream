@@ -88,7 +88,7 @@ Default replay mode remains batch-backed; continuous recording and camera modes 
 
 ### Offline recognition experiments
 
-`experiments/` compares the current reader with rectified whole-digit regions and local Tesseract. It uses optional isolated OpenCV/NumPy packages and never publishes state, opens a camera, or changes the runtime reader. The normal repository check compiles these files without importing the optional packages; experiment tests run separately. See [comparison evidence and limits](recognition-comparison.md) before proposing runtime integration. Candidate coverage and sparse reviewed correctness are distinct; the prototype still fails a deliberate framing-error case.
+`experiments/` compares the current reader with rectified whole-digit regions and local Tesseract. It uses optional isolated OpenCV/NumPy packages and never publishes state, opens a camera, or changes the runtime reader. The normal repository check compiles these files without importing the optional packages; experiment tests run separately. The region candidate now adds padded observation windows, rejects boundary contact and ambiguous shapes before normalization, and records per-digit rejection evidence. Translation stress runs include short windows with separate confirmation history and truth only at reviewed anchors. See [comparison evidence and limits](recognition-comparison.md), including the fixed shifted-score example and coverage loss, before proposing runtime integration. Explicit clock formats, independent field confirmation and monitor shadow integration remain pending.
 
 ## Live boundaries and remaining work
 
