@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Livestream · OBS scoreboard</title>
+  <link rel="stylesheet" href="/overlay.css">
+</head>
+<body>
+  <div class="scoreboard" aria-label="Match scoreboard">
+    <div class="match"><span class="sport">FUTSAL</span><span class="replay">REPLAY</span></div>
+    <div class="team home"><span>HOME</span><strong id="home">—</strong></div>
+    <div class="team away"><span>AWAY</span><strong id="away">—</strong></div>
+    <div class="time"><span>GAME TIME</span><strong id="clock">--:--</strong></div>
+    <div id="notice" role="status">WAITING FOR REPLAY</div>
+  </div>
+  <script src="/overlay.js"></script>
+</body>
+</html>

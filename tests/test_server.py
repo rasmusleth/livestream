@@ -1,0 +1,87 @@
+"""Test the overlay transport and preserve video seeking over real local HTTP."""
+import http.client
+from http.server import ThreadingHTTPServer
+import json
+from pathlib import Path
+import tempfile
+import threading
+import unittest
+
+from playback import PlaybackState
+from server import Handler
+from test_playback import dataset
+
+
+class QuietHandler(Handler):
+    def log_message(self, *args):
+        pass
+
+
+class OverlayHTTP(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temporary = tempfile.TemporaryDirectory(prefix='livestream-http-')
+        cls.server = ThreadingHTTPServer(('127.0.0.1', 0), QuietHandler)
+        cls.server.video = Path(cls.temporary.name) / 'test.mp4'
+        cls.server.video.write_bytes(b'0123456789')
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join()
+        cls.temporary.cleanup()
+
+    def setUp(self):
+        self.server.playback = PlaybackState(dataset())
+
+    def request(self, method, path, body=None, headers=None):
+        connection = http.client.HTTPConnection(*self.server.server_address, timeout=3)
+        try:
+            connection.request(method, path, body=body, headers=headers or {})
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
+    def test_overlay_reads_server_selected_state(self):
+        status, _, body = self.request('POST', '/api/playback', json.dumps({'position': 1.5}),
+                                       {'Content-Type': 'application/json'})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['values']['away'], 1)
+        status, headers, body = self.request('GET', '/api/state')
+        self.assertEqual(status, 200)
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertEqual(json.loads(body)['values']['clock'], '19:58')
+        status, _, body = self.request('POST', '/api/playback', '{"position":null}',
+                                       {'Content-Type': 'application/json'})
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)['connected'])
+        self.assertEqual(json.loads(body)['values']['away'], 1)
+
+    def test_invalid_or_cross_origin_updates_are_rejected(self):
+        for body in ('{}', 'not json', '{"position":-1}', '{"position":NaN}', '{"position":true}'):
+            with self.subTest(body=body):
+                self.assertEqual(self.request('POST', '/api/playback', body,
+                                               {'Content-Type': 'application/json'})[0], 400)
+        self.assertEqual(self.request('POST', '/api/playback', '{"position":1}',
+            {'Content-Type': 'application/json', 'Origin': 'https://example.org'})[0], 403)
+        self.assertIsNone(self.server.playback.snapshot()['values'])
+
+    def test_routes_remain_allowlisted(self):
+        self.assertEqual(self.request('GET', '/overlay')[0], 200)
+        self.assertEqual(self.request('GET', '/overlay.js')[0], 200)
+        self.assertEqual(self.request('GET', '/.git/config')[0], 404)
+        self.assertEqual(self.request('POST', '/other', '{}')[0], 404)
+
+    def test_video_ranges_still_allow_seeking(self):
+        status, headers, body = self.request('GET', '/video', headers={'Range': 'bytes=2-5'})
+        self.assertEqual(status, 206)
+        self.assertEqual(headers['Content-Range'], 'bytes 2-5/10')
+        self.assertEqual(body, b'2345')
+
+
+if __name__ == '__main__':
+    unittest.main()

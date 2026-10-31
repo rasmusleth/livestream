@@ -37,3 +37,9 @@ Sampling adds up to approximately 0.1 seconds before a changed display is observ
 Only scores 0 and 1 appear in the supplied score regions. Higher scores, two-digit scores, obscured inputs, camera movement, other lighting conditions, and new clock formats need additional footage. Period recognition is outside this version.
 
 The verification interface has been checked in the local browser, including video loading and seeking to 120 seconds, where both the source and digital output show 0–1 and 18:41.
+
+## Recorded overlay in OBS
+
+On 2026-10-25, the user confirmed that they followed `docs/obs-overlay.md` on their Mac and that the OBS setup worked as planned. This is user-reported validation of the recorded-playback overlay in OBS, in addition to the local browser checks. It does not establish live HDMI capture compatibility, live latency, or exhaustive failure/recovery coverage.
+
+The live scoreboard camera reaches OBS through an HDMI capture device. Its model and simultaneous access by OBS and the reader remain to be established.

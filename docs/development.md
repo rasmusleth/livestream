@@ -17,7 +17,7 @@ The initial development target is macOS with Python 3.12. CI uses the `macos-26`
 python3 scripts/check.py
 ```
 
-The same command runs in CI. It validates calibration coordinates, compiles Python without writing bytecode, checks JavaScript syntax, and runs tests. Missing required tools fail the check.
+The same command runs in CI. It validates calibration coordinates, compiles Python without writing bytecode, checks JavaScript syntax, and runs tests. Missing required tools fail the check. HTTP transport tests bind a temporary loopback port, so the check requires permission to use local sockets.
 
 Tests generate a small lossless video in a temporary directory to exercise the complete FFmpeg-to-JSON pipeline. They cover clock/score changes, a blank interval, preservation of confirmed values, and recovery. The generated images and video are removed after the test. This validates pipeline behavior on controlled inputs; it is not evidence of recognition accuracy on real footage.
 
@@ -28,7 +28,7 @@ python3 reader.py scoreboard-2-min-clip.mp4
 python3 scripts/check.py
 ```
 
-Five recording regression tests run when generated readings exist and are explicitly skipped otherwise. CI has no private recording or generated readings and reports these skips. For UI changes, run `python3 server.py` and manually check playback, seeking, and the extracted values. Add evidence to the PR when useful.
+Five recording regression tests run when generated readings exist and are explicitly skipped otherwise. CI has no private recording or generated readings and reports these skips. For UI changes, run `python3 server.py` and manually check playback, seeking, and the extracted values. For overlay changes, also check the separate overlay page while seeking, pausing, stopping replay output, and recovering the connection. Add evidence to the PR when useful.
 
 ## CI
 

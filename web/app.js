@@ -38,3 +38,41 @@ $('seek-form').addEventListener('submit', event => {
   event.preventDefault();
   if (dataset) { video.pause(); video.currentTime = Math.max(0, Math.min(Number($('seek-time').value), dataset.duration - .1)); }
 });
+
+// The operator publishes positions; the server looks up confirmed values itself.
+let publishing = false;
+let requestInFlight = null;
+$('overlay-url').value = `${location.origin}/overlay`;
+async function publishPosition() {
+  if (!publishing || requestInFlight || !dataset) return;
+  try {
+    requestInFlight = fetch('/api/playback', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({position: Math.min(video.currentTime, dataset.duration)}),
+      signal: AbortSignal.timeout(1500),
+    });
+    const response = await requestInFlight;
+    if (!response.ok) throw Error('Could not send replay');
+    if (publishing) $('publish-status').textContent = video.paused ? 'Sending replay · paused at this position.' : 'Sending replay to the OBS overlay.';
+  } catch {
+    if (publishing) $('publish-status').textContent = 'Replay connection lost. Retrying…';
+  } finally { requestInFlight = null; }
+}
+$('publish').addEventListener('click', async () => {
+  if (!dataset) return;
+  $('publish').disabled = true;
+  publishing = !publishing;
+  $('publish').setAttribute('aria-pressed', String(publishing));
+  $('publish').textContent = publishing ? 'Stop replay output' : 'Send replay to overlay';
+  try {
+    if (publishing) { await publishPosition(); return; }
+    // Let the last position arrive before stopping, so it cannot reactivate output.
+    if (requestInFlight) await requestInFlight.catch(() => {});
+    $('publish-status').textContent = 'Replay output is off. The overlay holds its last reading.';
+    const response = await fetch('/api/playback', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({position: null}), signal: AbortSignal.timeout(1500)});
+    if (!response.ok) throw Error('Stop failed');
+  } catch { $('publish-status').textContent = 'Connection lost. The overlay will mark the output stale within two seconds.'; }
+  finally { $('publish').disabled = false; }
+});
+setInterval(publishPosition, 100);
+for (const event of ['seeked', 'pause', 'play']) video.addEventListener(event, publishPosition);
