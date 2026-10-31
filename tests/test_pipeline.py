@@ -77,7 +77,13 @@ class VideoPipeline(unittest.TestCase):
                 process.stdout.close()
                 process.stderr.close()
             state = ContinuousState('recording', 'generated fixture')
-            worker = InputWorker(state, lambda stop: capture_rows(recording_command(video, config), config, stop))
+            observed = []
+            def preview_rows(stop):
+                for row in capture_rows(recording_command(video, config, preview=True, realtime=False),
+                                        config, stop, preview=state.update_preview):
+                    observed.append(row)
+                    yield row
+            worker = InputWorker(state, preview_rows)
             worker.start()
             worker.thread.join(timeout=8)
             if worker.thread.is_alive():
@@ -85,6 +91,8 @@ class VideoPipeline(unittest.TestCase):
                 self.fail('Continuous input failed to reach the end of the recording')
             snapshot = state.snapshot()
             self.assertIsNone(snapshot['error'])
+            self.assertEqual(observed, data['readings'])
+            self.assertEqual(state.preview_snapshot()[1:3], (960, 540))
             self.assertEqual(snapshot['values'], goal)
             self.assertFalse(snapshot['running'])
             self.assertFalse(snapshot['connected'])

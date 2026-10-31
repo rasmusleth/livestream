@@ -12,11 +12,28 @@ class ContinuousState:
         self.running = True
         self.error = None
         self.diagnostics = ''
+        self.preview = None
+        self.preview_seen = None
+        self.preview_sequence = 0
 
     def update(self, row):
         with self.lock:
             self.row = row
             self.seen = self.clock()
+
+    def update_preview(self, frame, width, height):
+        if width <= 0 or height <= 0 or len(frame) != width*height*3:
+            raise ValueError('Expected one complete RGB preview frame')
+        with self.lock:
+            self.preview = (bytes(frame), width, height)
+            self.preview_seen = self.clock()
+            self.preview_sequence += 1
+
+    def preview_snapshot(self):
+        with self.lock:
+            if self.preview is None:
+                return None
+            return (*self.preview, self.preview_sequence, max(0, self.clock()-self.preview_seen))
 
     def diagnostic(self, text):
         with self.lock:
@@ -38,7 +55,9 @@ class ContinuousState:
                     'status': row['status'] if connected else 'held' if values else 'unknown',
                     'age': age, 'position': row['t'] if row else None, 'connected': connected,
                     'delivery_age': elapsed, 'running': self.running, 'error': self.error,
-                    'diagnostics': self.diagnostics, 'observation': row}
+                    'diagnostics': self.diagnostics, 'observation': row,
+                    'preview': {'available': self.preview is not None, 'sequence': self.preview_sequence,
+                                'age': None if self.preview_seen is None else max(0, self.clock()-self.preview_seen)}}
 
 
 class InputWorker:

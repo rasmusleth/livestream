@@ -63,6 +63,36 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = self.path.split('?')[0]
+        if route in ('/api/preview', '/api/calibration'):
+            source = getattr(self.server, 'source', None)
+            if source is None:
+                self.send_error(404, 'Preview is available in continuous input modes')
+                return
+            if route == '/api/calibration':
+                self.send_json({'profile': self.server.calibration_name, 'config': self.server.calibration})
+                return
+            preview = source.preview_snapshot()
+            if preview is None:
+                self.send_response(204)
+                self.send_header('Content-Length', '0')
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                return
+            frame, width, height, sequence, age = preview
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Content-Length', str(len(frame)))
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('X-Preview-Width', str(width))
+            self.send_header('X-Preview-Height', str(height))
+            self.send_header('X-Preview-Sequence', str(sequence))
+            self.send_header('X-Preview-Age', str(age))
+            self.end_headers()
+            try:
+                self.wfile.write(frame)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
         if route == '/api/state':
             source = getattr(self.server, 'source', None)
             state = source.snapshot() if source else {**self.server.playback.snapshot(), 'mode': 'replay'}
@@ -135,17 +165,19 @@ if __name__ == '__main__':
                 parser.error('Video filename does not match the analyzed recording.')
         else:
             config = json.loads(args.calibration.read_text())
-            command = (camera_command(config, args.device, args.capture_fps) if args.mode == 'camera'
-                       else recording_command(args.video, config))
+            command = (camera_command(config, args.device, args.capture_fps, preview=True) if args.mode == 'camera'
+                       else recording_command(args.video, config, preview=True))
             source = ContinuousState(args.mode, args.device if args.mode == 'camera' else args.video.name)
             worker = InputWorker(source, lambda stop: capture_rows(command, config, stop,
-                camera=args.mode == 'camera', diagnostic=source.diagnostic))
+                camera=args.mode == 'camera', diagnostic=source.diagnostic, preview=source.update_preview))
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         parser.error(str(error))
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     server.video = None if args.mode == 'camera' else args.video.resolve()
     server.playback = PlaybackState(metadata) if metadata else None
     server.source = source
+    server.calibration = config if source else None
+    server.calibration_name = args.calibration.name
     print(f'Open http://127.0.0.1:{args.port} — mode: {args.mode} — Ctrl+C to stop', flush=True)
     if worker:
         worker.start()

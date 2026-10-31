@@ -7,7 +7,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from capture import camera_command, capture_rows, frame_filter
+from capture import camera_command, capture_rows, frame_filter, preview_dimensions
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,6 +36,17 @@ class CaptureSafety(unittest.TestCase):
             '-i', 'color=size=1280x720:rate=5:duration=0.2', '-vf', frame_filter(self.config, camera=True),
             '-f', 'null', '-'], capture_output=True, timeout=5)
         self.assertNotEqual(result.returncode, 0)
+
+    def test_preview_resolution_guard(self):
+        for size, success in [('1920x1080', True), ('1280x720', False)]:
+            result = subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-f', 'lavfi',
+                '-i', f'color=size={size}:rate=5:duration=0.2', '-vf', frame_filter(self.config, camera=True, preview=True),
+                '-f', 'null', '-'], capture_output=True, timeout=5)
+            self.assertEqual(result.returncode == 0, success, result.stderr.decode())
+        self.assertEqual(preview_dimensions(self.config), (960, 540))
+        for crop in ([601, 500, 850, 360], [1800, 500, 850, 360]):
+            with self.assertRaises(ValueError):
+                preview_dimensions({**self.config, 'crop': crop})
 
     def test_partial_pipe_reads_are_assembled_into_complete_frames(self):
         width, height = self.config['crop'][2:]
