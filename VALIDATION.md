@@ -19,14 +19,14 @@ The reader analyzes 1,638 samples at 10 Hz. Segment locations were calibrated us
 These timestamps were not used to position the segment probes. Visible readings were reviewed against extracted source frames and checked against the reader output.
 
 | Video position (seconds) | Clock | Home | Away |
-| --- | --- | --- | --- |
-| 30 | 19:36 | 0 | 0 |
-| 50 | 19:17 | 0 | 0 |
-| 70 | 19:16 | 0 | 0 |
-| 90 | 19:08 | 0 | 0 |
-| 110 | 18:48 | 0 | 0 |
-| 130 | 18:41 | 0 | 1 |
-| 150 | 18:33 | 0 | 1 |
+| ------------------------ | ----- | ---- | ---- |
+| 30                       | 19:36 | 0    | 0    |
+| 50                       | 19:17 | 0    | 0    |
+| 70                       | 19:16 | 0    | 0    |
+| 90                       | 19:08 | 0    | 0    |
+| 110                      | 18:48 | 0    | 0    |
+| 130                      | 18:41 | 0    | 1    |
+| 150                      | 18:33 | 0    | 1    |
 
 ## Limits and next steps
 
@@ -43,3 +43,9 @@ The verification interface has been checked in the local browser, including vide
 On 2026-10-25, the user confirmed that they followed `docs/obs-overlay.md` on their Mac and that the OBS setup worked as planned. This is user-reported validation of the recorded-playback overlay in OBS, in addition to the local browser checks. It does not establish live HDMI capture compatibility, live latency, or exhaustive failure/recovery coverage.
 
 The live scoreboard camera reaches OBS through an HDMI capture device. Its model and simultaneous access by OBS and the reader remain to be established.
+
+## Continuous processing and capture discovery: 2026-10-31
+
+The recording reader now supports flushed JSON-line observations and real-time-paced replay. The generated-video test checks that output arrives before the recording completes and matches the batch observations. Regenerating the supplied recording still yields 1,638 samples with 52 uncertain raw readings; recording regression checks remain required.
+
+A three-second video-only FFmpeg capture from `usb video` completed at 1920×1080 using UYVY422. Requested frame-rate configuration fell back to device defaults, so 25 fps operation is unverified. The user reported a green/distorted OBS picture after the capture and confirmed recovery after quitting OBS, reconnecting USB, and reopening OBS. Simultaneous use is not validated; the preferred live design gives the reader sole access to the scoreboard capture input. No video or audio recording was retained. See `docs/live-input.md`.

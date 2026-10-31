@@ -24,15 +24,15 @@ flowchart LR
     Shared --> Overlay[Transparent OBS browser overlay]
 ```
 
-| Component | Responsibility |
-| --- | --- |
-| `reader.py` | Probe source dimensions, decode sampled frames, measure calibrated LED segments, recognize digits, confirm observations, and write timestamped readings. |
-| `calibration.json` | Source dimensions, crop, sample rate, digit regions, and seven source-pixel probe centers per digit. |
-| `data/readings.json` | Generated metadata and observations, plus confirmed values, status, age, and segment diagnostics. Excluded from Git. |
-| `server.py` | Serve allowlisted assets and video on loopback, support byte-range seeking, and expose local replay-position and overlay-state endpoints. |
-| `playback.py` | Select confirmed observations by player position and track whether the publishing player is still connected. Never advance the match clock independently. |
-| `web/` | Show verification diagnostics, optionally publish playback position, and render a separate transparent overlay. |
-| `tests/` | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording. |
+| Component            | Responsibility                                                                                                                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reader.py`          | Probe recorded source dimensions and decode sampled frames. `FrameReader` measures LED segments and confirms observations one frame at a time. Batch mode writes a dataset; streaming mode emits flushed JSON lines. |
+| `calibration.json`   | Source dimensions, crop, sample rate, digit regions, and seven source-pixel probe centers per digit.                                                                                                                 |
+| `data/readings.json` | Generated metadata and observations, plus confirmed values, status, age, and segment diagnostics. Excluded from Git.                                                                                                 |
+| `server.py`          | Serve allowlisted assets and video on loopback, support byte-range seeking, and expose local replay-position and overlay-state endpoints.                                                                            |
+| `playback.py`        | Select confirmed observations by player position and track whether the publishing player is still connected. Never advance the match clock independently.                                                            |
+| `web/`               | Show verification diagnostics, optionally publish playback position, and render a separate transparent overlay.                                                                                                      |
+| `tests/`             | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording.                                                                                                  |
 
 The initial development target is macOS with Python 3.12; CI uses macOS 26. Other operating systems and Python versions are outside the current support scope.
 
@@ -56,7 +56,9 @@ State is in memory and resets on server restart. This proof of concept assumes o
 
 ### Current limits
 
-This is an offline, batch process for a fixed 1920×1080 input and one-digit scores. Seeking uses the previously computed source timeline. It is not a live recognition engine and does not provide manual overrides, automatic calibration, or period recognition. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
+The recording reader supports batch output and continuous JSON-line output, optionally paced at playback speed. Both share recognition and confirmation logic; the continuous path does not accumulate a full recording. It is not yet connected to server state.
+
+The existing viewer/overlay remains an offline, batch-backed process for a fixed 1920×1080 input and one-digit scores. Seeking uses the previously computed source timeline. It is not a live recognition engine and does not provide manual overrides, automatic calibration, or period recognition. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
 
 ## Intended live architecture
 
@@ -87,6 +89,7 @@ Recorded replay should exercise the same recognition and state logic as live inp
 - **Calibrated segment recognition first:** the supplied display has large, fixed LED digits. Broader recognition approaches need comparative evidence before adding complexity.
 - **Keep evidence reviewable:** timestamped raw observations, confirmation status, and source playback are part of the development workflow.
 - **OBS browser output works with recorded replay:** simple local HTTP polling provides the first transport. Integration and timing with a live reader remain undecided until capture is tested on macOS.
-- **Still to establish:** camera interface, acceptable end-to-end delay, multiple venues, higher scores, clock formats, manual override semantics, and loss/recovery behavior.
+- **Capture ownership:** the camera uses a generic USB-C HDMI capture device exposed as `usb video` on the streaming/development Mac. A direct capture succeeded, but OBS was disrupted afterward and recovered after reconnecting the device and restarting OBS. Prefer the reader as the sole owner of the scoreboard input, with OBS consuming the browser overlay. See `docs/live-input.md` for evidence and limits.
+- **Still to establish:** reliable capture configuration, acceptable end-to-end delay, multiple venues, higher scores, clock formats, manual override semantics, and loss/recovery behavior.
 
 Record significant later decisions with their context and tradeoffs in `docs/`. Update this document as boundaries become implemented.

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import shutil
+import selectors
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,32 @@ class VideoPipeline(unittest.TestCase):
                             '--calibration', str(ROOT / 'calibration.json'), '--output', str(output)],
                            check=True, capture_output=True, text=True)
             data = json.loads(output.read_text())
+            # Normal-speed streaming must deliver a row before decoding completes,
+            # and retain exactly the same timestamped observations as batch mode.
+            process = subprocess.Popen([sys.executable, str(ROOT / 'reader.py'), str(video),
+                '--calibration', str(ROOT / 'calibration.json'), '--stream', '--realtime'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                with selectors.DefaultSelector() as ready:
+                    ready.register(process.stdout, selectors.EVENT_READ)
+                    self.assertTrue(ready.select(timeout=8), 'No streamed reading arrived')
+                first = json.loads(process.stdout.readline())
+                self.assertIsNone(process.poll(), 'Reader waited for the entire recording')
+                remaining = process.stdout.read()
+                errors = process.stderr.read()
+                self.assertEqual(process.wait(timeout=10), 0, errors)
+                streamed = [first] + [json.loads(line) for line in remaining.splitlines()]
+                self.assertEqual(streamed, data['readings'])
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                process.stdout.close()
+                process.stderr.close()
             rows = data['readings']
             at = lambda t: rows[round(t * data['fps'])]
             self.assertEqual(len(rows), 12)

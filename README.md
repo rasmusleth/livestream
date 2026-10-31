@@ -39,7 +39,7 @@ Inspect the footage before choosing a recognition approach or application stack.
 ## Open questions
 
 - What does the physical scoreboard look like in the camera feed?
-- How is the scoreboard camera connected to the streaming computer, and how does OBS receive it?
+- Which capture mode works reliably for the USB-C HDMI capture device exposed as “USB video,” with the reader owning that input?
 - What clock formats, periods, and reset behavior need to be supported?
 - What delay is acceptable between the physical scoreboard and the digital overlay?
 - Does this need to work at one venue initially or across several different scoreboards?
@@ -88,3 +88,13 @@ python3 scripts/check.py
 ```
 
 These checks include a generated-video pipeline test without needing the match recording. Real-recording regression checks additionally run when local generated readings exist.
+
+## Continuous processing and live-input preparation
+
+To emit observations continuously from the existing recording at playback speed:
+
+```sh
+python3 reader.py scoreboard-2-min-clip.mp4 --stream --realtime
+```
+
+This prints one JSON observation per line without waiting for full-recording analysis. It does not update the existing OBS overlay yet. The live HDMI capture adapter remains to be implemented. See [live-input findings and next steps](docs/live-input.md), including the OBS disruption observed during a shared-device test and its successful recovery.
