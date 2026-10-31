@@ -6,11 +6,26 @@ import json
 from pathlib import Path
 
 import numpy as np
-from compare_readers import assemble, confirmed_rows, RegionReader, evaluate
+from compare_readers import assemble, confirmed_rows, RegionReader, evaluate, evaluate_fields
+from candidate_state import CandidateState
 from reader import PATTERNS
 
 
 class ComparisonSafety(unittest.TestCase):
+    def test_independent_metrics_do_not_count_held_clock_as_fresh(self):
+        state=CandidateState()
+        names=('minutes_tens','minutes_units','seconds_tens','seconds_units','home','away')
+        evidence={name:{'value':value} for name,value in zip(names,(1,7,5,1,0,1))}
+        rows=[state.update(evidence,0,layout='mmss',frame_id='a'),
+              state.update(evidence,.1,layout='mmss',frame_id='b')]
+        evidence['minutes_tens']={'value':None,'reason':'edge_foreground'}
+        rows.append(state.update(evidence,.2,layout='mmss',frame_id='c'))
+        metrics=evaluate_fields(rows,[{'t':.2,'values':{'clock':'17:50','home':0,'away':1}}],10)
+        self.assertEqual(metrics['clock']['fresh_confirmed'],1)
+        self.assertEqual(metrics['clock']['reviewed_fresh_wrong'],0)
+        self.assertIsNone(metrics['clock']['reviewed'][0]['fresh_correct'])
+        self.assertTrue(metrics['away']['reviewed'][0]['fresh_correct'])
+
     def test_supported_formats_and_missing_values(self):
         self.assertEqual(assemble([1, 7, 5, 1, 0, 1]), {'clock':'17:51','home':0,'away':1})
         self.assertEqual(assemble(['blank', 9, 1, 7, 0, 1])['clock'], '09:17')

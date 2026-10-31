@@ -134,3 +134,5 @@ Keep OBS from capturing the same device. Check several visible clock and score v
 ## Offline recognition comparison
 
 An isolated experiment compares the existing probes, a rectified whole-digit reader, and local Tesseract OCR on both recordings. The candidate improves reading coverage but still has failures under deliberate framing errors; it is not enabled in the server or OBS overlay. See [findings and limitations](docs/recognition-comparison.md) and [reproduction instructions](experiments/README.md). Optional experiment packages do not change application setup.
+
+The next offline stage adds [explicit clock layouts and independent candidate confirmation](docs/candidate-confirmation.md). Scores can confirm while the clock is unreadable, and synthetic timed tenths sequences can confirm without generating ticks. Strict glyph rejection still prevents tenths confirmation in the new real recording. Monitor shadow integration remains pending; the running reader and OBS behavior are unchanged.
