@@ -24,15 +24,15 @@ flowchart LR
     Shared --> Overlay[Transparent OBS browser overlay]
 ```
 
-| Component | Responsibility |
-| --- | --- |
-| `reader.py` | Probe recorded source dimensions and decode sampled frames. `FrameReader` measures LED segments and confirms observations one frame at a time. Batch mode writes a dataset; streaming mode emits flushed JSON lines. |
-| `calibration.json` | Source dimensions, crop, sample rate, digit regions, and seven source-pixel probe centers per digit. |
-| `data/readings.json` | Generated metadata and observations, plus confirmed values, status, age, and segment diagnostics. Excluded from Git. |
-| `server.py` | Serve allowlisted assets and video on loopback, support byte-range seeking, and expose local replay-position and overlay-state endpoints. |
-| `playback.py` | Select confirmed observations by player position and track whether the publishing player is still connected. Never advance the match clock independently. |
-| `web/` | Show verification diagnostics, optionally publish playback position, and render a separate transparent overlay. |
-| `tests/` | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording. |
+| Component            | Responsibility                                                                                                                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reader.py`          | Probe recorded source dimensions and decode sampled frames. `FrameReader` measures LED segments and confirms observations one frame at a time. Batch mode writes a dataset; streaming mode emits flushed JSON lines. |
+| `calibration.json`   | Source dimensions, crop, sample rate, digit regions, and seven source-pixel probe centers per digit.                                                                                                                 |
+| `data/readings.json` | Generated metadata and observations, plus confirmed values, status, age, and segment diagnostics. Excluded from Git.                                                                                                 |
+| `server.py`          | Serve allowlisted assets and video on loopback, support byte-range seeking, and expose local replay-position and overlay-state endpoints.                                                                            |
+| `playback.py`        | Select confirmed observations by player position and track whether the publishing player is still connected. Never advance the match clock independently.                                                            |
+| `web/`               | Show verification diagnostics, optionally publish playback position, and render a separate transparent overlay.                                                                                                      |
+| `tests/`             | Recognition safety, generated-video pipeline coverage, and optional regression checks against the user's recording.                                                                                                  |
 
 The initial development target is macOS with Python 3.12; CI uses macOS 26. Other operating systems and Python versions are outside the current support scope.
 

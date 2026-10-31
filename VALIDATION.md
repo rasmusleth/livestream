@@ -19,14 +19,14 @@ The reader analyzes 1,638 samples at 10 Hz. Segment locations were calibrated us
 These timestamps were not used to position the segment probes. Visible readings were reviewed against extracted source frames and checked against the reader output.
 
 | Video position (seconds) | Clock | Home | Away |
-| --- | --- | --- | --- |
-| 30 | 19:36 | 0 | 0 |
-| 50 | 19:17 | 0 | 0 |
-| 70 | 19:16 | 0 | 0 |
-| 90 | 19:08 | 0 | 0 |
-| 110 | 18:48 | 0 | 0 |
-| 130 | 18:41 | 0 | 1 |
-| 150 | 18:33 | 0 | 1 |
+| ------------------------ | ----- | ---- | ---- |
+| 30                       | 19:36 | 0    | 0    |
+| 50                       | 19:17 | 0    | 0    |
+| 70                       | 19:16 | 0    | 0    |
+| 90                       | 19:08 | 0    | 0    |
+| 110                      | 18:48 | 0    | 0    |
+| 130                      | 18:41 | 0    | 1    |
+| 150                      | 18:33 | 0    | 1    |
 
 ## Limits and next steps
 
