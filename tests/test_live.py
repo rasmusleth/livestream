@@ -12,6 +12,20 @@ class ContinuousDelivery(unittest.TestCase):
         self.row = {'t': .1, 'values': {'clock': '19:59', 'home': 0, 'away': 0},
                     'status': 'confirmed', 'age': 0}
 
+    def test_preview_is_bounded_immutable_and_ages_after_input_ends(self):
+        self.assertIsNone(self.state.preview_snapshot())
+        frame = bytearray([1, 2, 3])
+        self.state.update_preview(frame, 1, 1)
+        frame[0] = 9
+        self.assertEqual(self.state.preview_snapshot(), (b'\x01\x02\x03', 1, 1, 1, 0))
+        self.state.update_preview(b'abc', 1, 1)
+        self.state.finish()
+        self.now += 3
+        self.assertEqual(self.state.preview_snapshot(), (b'abc', 1, 1, 2, 3))
+        self.assertEqual(self.state.snapshot()['preview'], {'available': True, 'sequence': 2, 'age': 3})
+        with self.assertRaises(ValueError):
+            self.state.update_preview(b'ab', 1, 1)
+
     def test_startup_never_invents_values(self):
         state = self.state.snapshot()
         self.assertIsNone(state['values'])

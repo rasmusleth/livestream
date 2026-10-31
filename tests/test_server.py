@@ -91,6 +91,26 @@ class OverlayHTTP(unittest.TestCase):
         self.assertEqual(self.request('GET', '/readings.json')[0], 404)
         self.assertIn(b'Continuous input', self.request('GET', '/')[2])
 
+    def test_preview_endpoints_are_read_only_and_continuous_only(self):
+        for route in ('/api/preview', '/api/calibration'):
+            self.assertEqual(self.request('GET', route)[0], 404)
+        self.server.source = ContinuousState('recording', 'fixture')
+        self.server.calibration = {'reference_size': [2, 2]}
+        self.server.calibration_name = 'fixture.json'
+        self.assertEqual(self.request('GET', '/api/preview')[0], 204)
+        self.server.source.update_preview(b'abc', 1, 1)
+        status, headers, body = self.request('GET', '/api/preview')
+        self.assertEqual(status, 200)
+        self.assertEqual(body, b'abc')
+        self.assertEqual(headers['X-Preview-Width'], '1')
+        self.assertEqual(headers['X-Preview-Height'], '1')
+        self.assertEqual(headers['X-Preview-Sequence'], '1')
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertGreaterEqual(float(headers['X-Preview-Age']), 0)
+        self.assertEqual(json.loads(self.request('GET', '/api/calibration')[2]),
+                         {'profile': 'fixture.json', 'config': self.server.calibration})
+        self.assertEqual(self.request('POST', '/api/calibration', '{}')[0], 404)
+
     def test_video_ranges_still_allow_seeking(self):
         status, headers, body = self.request('GET', '/video', headers={'Range': 'bytes=2-5'})
         self.assertEqual(status, 206)

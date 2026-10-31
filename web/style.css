@@ -3,3 +3,6 @@
 #seek-form{display:flex;align-items:center;gap:10px;margin-top:16px}#seek-time{width:80px}input[type=number],button{color:#e8edf5;background:#263346;border:1px solid #41536b;padding:8px 12px;border-radius:6px}button{cursor:pointer}button:hover{background:#354a64}
 
 .overlay-controls{margin-top:20px}.overlay-controls p{font-size:13px;color:#aab7ca}.overlay-actions{display:flex;align-items:center;gap:18px}.overlay-controls a{font-size:13px;color:#c6f487;text-underline-offset:3px}.overlay-controls input[type=text]{display:block;width:100%;max-width:540px;margin-top:8px;padding:10px 12px;color:#dce8f5;background:#10151d;border:1px solid #41536b;border-radius:6px;font-size:13px}#publish[aria-pressed=true]{background:#35523a;border-color:#84b66e}#publish-status{min-height:20px}
+
+/* Continuous-input alignment preview. */
+.preview-frame{position:relative;background:#080b10;aspect-ratio:16/9;margin:16px 0}.preview-frame canvas,.preview-frame svg{position:absolute;width:100%;height:100%;inset:0}.preview-frame svg{pointer-events:none}.preview-options{display:flex;gap:16px;flex-wrap:wrap;align-items:center}.preview-options label{display:flex;gap:6px;align-items:center}.preview-options input{width:auto}#preview-status{margin-top:12px}

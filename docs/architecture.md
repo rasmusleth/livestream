@@ -62,6 +62,12 @@ Camera selection is explicit, audio is disabled, and a filter guard rejects reso
 
 Missing frames become disconnected after two seconds, and confirmation age increases with time since the last frame. A ten-second frame timeout stops the decoder. EOF and errors preserve the last confirmed values with held status; restarting input currently requires restarting the server. Camera output is labelled `LIVE`, recorded output `REPLAY`. See `docs/live-input.md` for the required single-owner capture arrangement and unvalidated hardware behavior.
 
+### Input preview and alignment
+
+Continuous modes use one FFmpeg decoder and split each decoded input into a half-resolution display image and the original crop/scale recognition path. Both branches convert to RGB24 and are packed vertically into one raw output frame; Python extracts the recognition pixels and retains only the latest preview, published at most twice per second. The input is never opened twice. Reference dimensions and crop coordinates/sizes must be even integers and the crop must fit the source.
+
+The monitor draws the active profile's six digit regions and 42 segment centers over a canvas. Read-only `/api/calibration` and uncached binary `/api/preview` are available only in continuous modes. Preview age remains explicit after EOF, failure, or a browser freeze. Freezing affects presentation only; recognition and confirmed-state delivery continue. Calibration editing and saving images are not implemented. Preview is slower than recognition and is not synchronized for frame-by-frame accuracy review.
+
 ### Current limits
 
 The recording reader supports batch output and continuous JSON-line output, optionally paced at playback speed. Both share recognition and confirmation logic; the continuous path does not accumulate a full recording. The server-owned recording mode connects this recognition path to server state.

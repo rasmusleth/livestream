@@ -107,4 +107,4 @@ python3 server.py --mode recording
 python3 server.py --mode camera --device 'usb video'
 ```
 
-Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.
+Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. The monitor shows a preview with read-only digit regions and segment probes for checking camera alignment. Its freeze button holds the image while recognition and the overlay continue. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.
