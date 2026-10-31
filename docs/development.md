@@ -32,7 +32,7 @@ Five recording regression tests run when generated readings exist and are explic
 
 ## CI
 
-`.github/workflows/ci.yml` runs on PRs to `main`, pushes to `main`, and manual dispatch. It does not use path filters, so documentation-only PRs also produce the required result.
+`.github/workflows/ci.yml` runs on PRs to any branch (including stacked PRs), pushes to `main`, and manual dispatch. It does not use path filters, so documentation-only PRs also produce the required result.
 
 - One **CI** job runs Python checks and tests on macOS 26 with Python 3.12, plus JavaScript syntax checks with Node.js 24. Use the check name `CI` for branch protection.
 - New runs cancel superseded runs for the same PR/ref. Jobs have time limits and read-only repository permissions; checkout does not persist credentials.
