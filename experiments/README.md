@@ -40,3 +40,5 @@ Stress-test only labels marked `heldout`, using the same pixel translations for 
 ```
 
 No images or audio are saved by these scripts. Numeric output files may be large; keep them ignored. The Regions prototype and OCR baseline still make mistakes. Neither is wired into production input or the overlay.
+
+The shared two-identical-observation rule is intentionally retained for comparison. It can fail on a perfectly recognized running tenths clock at 10 Hz. See the report before reusing this confirmation helper in a live reader.

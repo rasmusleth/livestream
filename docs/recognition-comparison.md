@@ -55,6 +55,12 @@ Labels refer to the **exact FFmpeg 10 Hz output samples**, not separately sought
 
 On the eight additional timestamps, Regions produces seven correct raw readings and one unknown; Current produces four correct and four unknown; OCR produces one wrong and seven unknown. Stale held clocks often differ from current truth; they are counted separately from wrong fresh confirmations. Zero wrong Regions confirmations in these sparse spot checks does not establish zero errors elsewhere.
 
+### Confirmation limitation for tenths
+
+At 10 Hz, a running tenths display may change on every sample. The existing requirement for two identical complete readings can therefore prevent fresh output even with perfect recognition. Repeated frames or a paused clock can occasionally satisfy it, but they are not a reliable confirmation strategy. Unknown gaps in the experiment combine visual failures with this state-rule limitation; they must not all be attributed to recognition quality.
+
+Production integration needs a separately tested rule that confirms successive observed clock values consistent with their source timing, while preserving pauses, explicit resets/corrections, and uncertainty. It must never generate an unseen tick to fill missing input. Independent score/clock confirmation is also needed, but separating fields alone does not solve this tenths issue.
+
 ## Deliberate framing errors
 
 Each of the eight additional frames was translated with calibration left unchanged. The two candidates saw the same shifted pixels. These are single-frame raw checks, not confirmation tests, and only translations were tested; no zoom, rotation, or moving-camera accuracy is claimed.
