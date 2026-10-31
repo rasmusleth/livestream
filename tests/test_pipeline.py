@@ -8,6 +8,9 @@ import sys
 import tempfile
 import unittest
 
+from capture import capture_rows, recording_command
+from live import ContinuousState, InputWorker
+
 ROOT = Path(__file__).resolve().parents[1]
 # Independent fixture drawings for the digits in this scenario; order is a,b,c,d,e,f,g.
 STROKES = {0: (0, 1, 2, 3, 4, 5), 1: (1, 2), 2: (0, 1, 3, 4, 6),
@@ -73,6 +76,18 @@ class VideoPipeline(unittest.TestCase):
                         process.wait()
                 process.stdout.close()
                 process.stderr.close()
+            state = ContinuousState('recording', 'generated fixture')
+            worker = InputWorker(state, lambda stop: capture_rows(recording_command(video, config), config, stop))
+            worker.start()
+            worker.thread.join(timeout=8)
+            if worker.thread.is_alive():
+                worker.stop()
+                self.fail('Continuous input failed to reach the end of the recording')
+            snapshot = state.snapshot()
+            self.assertIsNone(snapshot['error'])
+            self.assertEqual(snapshot['values'], goal)
+            self.assertFalse(snapshot['running'])
+            self.assertFalse(snapshot['connected'])
             rows = data['readings']
             at = lambda t: rows[round(t * data['fps'])]
             self.assertEqual(len(rows), 12)

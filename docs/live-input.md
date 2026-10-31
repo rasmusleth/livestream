@@ -14,7 +14,7 @@ The development Mac is also the streaming Mac. The camera sends HDMI into a gene
 
 Do not treat this check as validation of simultaneous OBS/FFmpeg access. Further hardware capture tests should be coordinated with the operator and avoid a competing OBS source using the scoreboard device.
 
-For the intended live path, prefer one owner of the scoreboard capture input: the reader captures the scoreboard, and OBS consumes the digital browser overlay. The separate match camera remains an OBS input. The live capture adapter and its connection to the overlay are not implemented yet.
+For the intended live path, prefer one owner of the scoreboard capture input: the reader captures the scoreboard, and OBS consumes the digital browser overlay. The separate match camera remains an OBS input. An experimental AVFoundation adapter now feeds the same confirmed-state overlay as continuous recorded input. Actual live scoreboard framing and recognition have not been validated.
 
 ## Continuous recognition from a recording
 
@@ -26,7 +26,7 @@ python3 reader.py scoreboard-2-min-clip.mp4 --stream --realtime
 
 Each stdout line is one JSON observation with the same fields as a row in `data/readings.json`: timestamp, raw reading, confirmed values, status, age, confidence margin, and segment evidence. Output is flushed after each observation. `--realtime` paces the recording input at normal speed; without it, streaming runs as fast as decoding permits. It is a playback pacing option, not a live latency measurement.
 
-Press Ctrl+C to stop. The reader closes and terminates its FFmpeg child when streaming stops early. The streaming path keeps recognition state without accumulating a full recording in memory. It does not write `data/readings.json` or drive the OBS overlay yet; the existing viewer/overlay still uses the batch dataset.
+Press Ctrl+C to stop. The reader closes and terminates its FFmpeg child when streaming stops early. The streaming path keeps recognition state without accumulating a full recording in memory. This CLI command does not write `data/readings.json` or publish to the overlay. The server-owned modes below connect continuous recognition directly to the overlay; default replay mode retains the batch-backed viewer.
 
 The original batch command remains available:
 
@@ -36,12 +36,60 @@ python3 reader.py scoreboard-2-min-clip.mp4
 
 Both modes share `FrameReader`, including the same recognition thresholds and two-observation confirmation. Before either recorded input mode starts, the source dimensions must match calibration.
 
+## Server-owned inputs
+
+### Recording to overlay
+
+```sh
+python3 server.py --mode recording
+```
+
+The server recognizes the recording at normal speed and drives `/overlay` directly. The monitor at `/` displays input status and current readings; it does not publish playback positions and can be closed without stopping recognition. No generated readings file is required for this mode. Use `--video /absolute/path/to/recording.mp4` for another calibrated recording.
+
+At the end of the file, the final values are held and explicitly marked disconnected. Restart the server to replay from the beginning. Seeking and looping are not implemented in continuous mode; use default replay mode for the original verification controls.
+
+### Camera to overlay: experimental
+
+1. Quit OBS before starting a hardware test. Keep other applications from opening the scoreboard capture device.
+2. Connect and power the camera and HDMI capture device.
+3. Ensure the live camera view matches `calibration.json` in both resolution and framing. The current calibration was made from the supplied scoreboard recording. Merely obtaining 1920×1080 frames does not establish matching framing or recognition accuracy.
+4. Start the reader with the exact named video input:
+
+```sh
+python3 server.py --mode camera --device 'usb video'
+```
+
+5. Open `http://127.0.0.1:8765` to inspect the monitor and input diagnostics. The camera graphic is labelled `LIVE`; the recording graphic is labelled `REPLAY`.
+6. For OBS integration, use a scene collection with the match camera and Browser overlay but no raw scoreboard `USB video` capture source. Keep the previous scene collection as a backup. The reader must remain the sole owner of the scoreboard capture input.
+7. Use `http://127.0.0.1:8765/overlay` as a 1920×1080 Browser source. Keep the server running; the monitor tab is optional.
+8. Press Ctrl+C in the server terminal to stop recognition and release the device. If input fails or stalls, inspect diagnostics and restart deliberately after resolving the cause. There is no automatic device reconnection.
+
+Use `--port 8767` if the default port is occupied, and change the monitor/overlay URLs accordingly. `--calibration` selects another calibration file. `--capture-fps` requests a capture rate (default 25); the driver may report a fallback, which is visible in diagnostics. A reliable production capture rate remains to be established.
+
+The camera adapter uses AVFoundation with an explicit device name and UYVY422 input, with audio disabled. It rejects default/index-based selection and audio-device syntax. A dimension guard rejects unexpected source dimensions before applying the calibrated crop. It processes actual arriving frames, without generating duplicate camera observations to reach a target rate. Camera observation timestamps use monotonic elapsed time; recording timestamps use source sample time. Neither mode advances the game clock independently.
+
+## Freshness and shutdown
+
+The server owns input and confirmed-state delivery. `/api/state` reports the latest observation, input status, confirmation age, and bounded FFmpeg diagnostics. Playback-position POSTs are rejected while continuous input owns the output, preventing an old replay tab from overwriting it.
+
+Two seconds without a new frame marks delivery disconnected and holds the last values. Confirmation age includes elapsed wall time since the last frame, so stale confirmed values do not appear fresh. Ten seconds without a complete frame stops the decoder with an error. EOF and errors preserve confirmed values and expose held status. The overlay shows a held-data badge rather than substituting zeroes.
+
+Stopping the server cooperatively stops the worker and terminates its FFmpeg child, with a kill fallback if termination stalls. Frames and diagnostic state are bounded in memory; camera video and audio are not written to disk.
+
+## Validation of this milestone
+
+Automated checks cover generated recording-to-state delivery without a browser publisher, frame assembly, decoder timeout cleanup, calibration dimension guards, lost frames, EOF/error state, and rejection of conflicting playback updates. Recording regression checks remain separate from camera validation.
+
+On 2026-10-31, with the user confirming OBS was closed, a short camera-server test received frames from `usb video` through the calibrated-size guard and exposed connected state over HTTP. The server then stopped via Ctrl+C and exited cleanly. The driver again reported a configuration fallback. This validates frame delivery and server shutdown in that setup, not requested 25 fps operation, live scoreboard recognition, or concurrent OBS use.
+
+Browser verification of continuous recorded input covered the monitor, independent overlay updates, a score change, and held data at EOF. An OBS test of server-owned input remains to be done; the earlier successful OBS check used the recorded-player output.
+
 ## Remaining work
 
-1. Establish a suitable capture mode with the scoreboard capture input owned by one application.
-2. Add a live input adapter with explicit device selection, configuration errors, and clean shutdown.
-3. Check or recalibrate the scoreboard regions against actual live camera framing. A camera pointed at something else is not a valid recognition test.
-4. Feed continuous confirmed observations into shared server state so the overlay no longer depends on a publishing playback tab.
-5. Measure delay and test signal loss, recovery, stopped clocks, score changes, and manual correction before match use.
+1. Validate the actual live scoreboard framing and recognition, adding preview/calibration controls as needed.
+2. Establish a suitable capture configuration without driver fallback.
+3. Test OBS with the reader owning the scoreboard input and OBS using only its browser overlay.
+4. Measure end-to-end delay and test signal loss/recovery with the real setup.
+5. Add manual correction and explicit recovery controls before relying on the tool during a match.
 
 Device discovery is documented in the official [FFmpeg AVFoundation documentation](https://ffmpeg.org/ffmpeg-devices.html#avfoundation). Device names and indices can change after reconnecting; select the intended device explicitly rather than assuming index 0 is always the scoreboard camera.

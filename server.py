@@ -1,10 +1,15 @@
-"""Local verification viewer, including byte-range video seeking."""
+"""Local scoreboard server with replay, continuous recording, and macOS camera input."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import argparse
 import json
 import mimetypes
 import re
+import sys
+import subprocess
+
+from capture import camera_command, capture_rows, recording_command
+from live import ContinuousState, InputWorker
 
 from playback import PlaybackState
 
@@ -29,6 +34,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != '/api/playback':
             self.send_error(404)
+            return
+        if getattr(self.server, 'source', None) is not None:
+            self.send_json({'error': 'The server owns this input; playback updates are disabled'}, 409)
             return
         # JSON plus an Origin check prevent a third-party page from controlling replay.
         origin = self.headers.get('Origin')
@@ -56,11 +64,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         route = self.path.split('?')[0]
         if route == '/api/state':
-            self.send_json(self.server.playback.snapshot())
+            source = getattr(self.server, 'source', None)
+            state = source.snapshot() if source else {**self.server.playback.snapshot(), 'mode': 'replay'}
+            self.send_json(state)
             return
-        routes = {'/overlay': ROOT / 'web/overlay.html', '/overlay.js': ROOT / 'web/overlay.js',
-                  '/overlay.css': ROOT / 'web/overlay.css', '/': ROOT / 'web/index.html', '/app.js': ROOT / 'web/app.js',
-                  '/style.css': ROOT / 'web/style.css', '/readings.json': ROOT / 'data/readings.json',
+        continuous = getattr(self.server, 'source', None) is not None
+        routes = {'/monitor.js': ROOT / 'web/monitor.js', '/overlay': ROOT / 'web/overlay.html', '/overlay.js': ROOT / 'web/overlay.js',
+                  '/overlay.css': ROOT / 'web/overlay.css', '/': ROOT / ('web/monitor.html' if continuous else 'web/index.html'), '/app.js': ROOT / 'web/app.js',
+                  '/style.css': ROOT / 'web/style.css', '/readings.json': None if continuous else ROOT / 'data/readings.json',
                   '/video': self.server.video}
         path = routes.get(route)
         if path is None or not path.is_file():
@@ -106,16 +117,43 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--mode', choices=('replay', 'recording', 'camera'), default='replay')
     parser.add_argument('--video', type=Path, default=ROOT / 'scoreboard-2-min-clip.mp4')
+    parser.add_argument('--calibration', type=Path, default=ROOT / 'calibration.json')
+    parser.add_argument('--device', help='Explicit AVFoundation camera name; no default camera is selected')
+    parser.add_argument('--capture-fps', type=float, default=25)
     args = parser.parse_args()
-    metadata = json.loads((ROOT / 'data/readings.json').read_text())
-    if args.video.name != metadata['video']:
-        parser.error('Video filename does not match the analyzed recording.')
+    if args.mode != 'camera' and args.device is not None:
+        parser.error('--device requires --mode camera')
+    if args.mode == 'camera' and (sys.platform != 'darwin' or not args.device):
+        parser.error('Camera mode requires macOS and an explicit --device name')
+    source = worker = metadata = None
+    try:
+        if args.mode == 'replay':
+            metadata = json.loads((ROOT / 'data/readings.json').read_text())
+            if args.video.name != metadata['video']:
+                parser.error('Video filename does not match the analyzed recording.')
+        else:
+            config = json.loads(args.calibration.read_text())
+            command = (camera_command(config, args.device, args.capture_fps) if args.mode == 'camera'
+                       else recording_command(args.video, config))
+            source = ContinuousState(args.mode, args.device if args.mode == 'camera' else args.video.name)
+            worker = InputWorker(source, lambda stop: capture_rows(command, config, stop,
+                camera=args.mode == 'camera', diagnostic=source.diagnostic))
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        parser.error(str(error))
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
-    server.video = args.video.resolve()
-    server.playback = PlaybackState(metadata)
-    print(f'Open http://127.0.0.1:{args.port} — Ctrl+C to stop', flush=True)
+    server.video = None if args.mode == 'camera' else args.video.resolve()
+    server.playback = PlaybackState(metadata) if metadata else None
+    server.source = source
+    print(f'Open http://127.0.0.1:{args.port} — mode: {args.mode} — Ctrl+C to stop', flush=True)
+    if worker:
+        worker.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        pass
+    finally:
+        if worker:
+            worker.stop()
         server.server_close()
