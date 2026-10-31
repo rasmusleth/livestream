@@ -67,7 +67,7 @@ Readings are precomputed from the recording at 10 samples per second and saved i
 
 `calibration.json` specifies the six digit regions and seven sample locations per digit, in source-image coordinates. The reader measures the bright LED strokes and decodes their segment patterns. Two consecutive matching samples are required before publishing a reading; otherwise the last confirmed values are held and labelled. A hold of one second or longer is marked stale.
 
-This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. A transparent OBS browser overlay can follow the verification player. Live capture and manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
+This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. A transparent OBS browser overlay can follow the verification player. Experimental macOS live capture is available; live scoreboard framing and recognition still need validation. Manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
 
 ### Validation
 
@@ -97,4 +97,14 @@ To emit observations continuously from the existing recording at playback speed:
 python3 reader.py scoreboard-2-min-clip.mp4 --stream --realtime
 ```
 
-This prints one JSON observation per line without waiting for full-recording analysis. It does not update the existing OBS overlay yet. The live HDMI capture adapter remains to be implemented. See [live-input findings and next steps](docs/live-input.md), including the OBS disruption observed during a shared-device test and its successful recovery.
+This prints one JSON observation per line without waiting for full-recording analysis. To feed continuous recognition directly to the overlay, use a server-owned input mode: See [live-input findings and next steps](docs/live-input.md), including the OBS disruption observed during a shared-device test and its successful recovery.
+
+```sh
+# Recognize the recording as it plays, without precomputed readings:
+python3 server.py --mode recording
+
+# Experimental live camera: ensure OBS is not also capturing this device:
+python3 server.py --mode camera --device 'usb video'
+```
+
+Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.

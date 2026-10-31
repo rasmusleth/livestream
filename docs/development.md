@@ -7,7 +7,7 @@
 - `chore/repository-workflow` builds on that prototype with repository guidance and CI. Its initial PR includes the prototype because `main` started with only the project brief.
 - For later work, branch from updated `main` using `feat/`, `fix/`, `docs/`, or `chore/` plus a descriptive name. These are conventions, not enforced prefixes.
 
-Keep changes reviewable. One person or agent owns a change through implementation, validation, and a clear PR description. Use draft PRs for work that needs review before it is ready. Human review decides when to merge; this repository has no automatic merging or scheduled coding agent.
+Keep changes reviewable. One person or agent owns a change through implementation, validation, and a clear PR description. After a completed, validated coding task with a meaningful change, push the feature branch and open or update a draft PR by default, unless the user asks to keep it local. The user has authorized this workflow; merging, releases, deployments, and repository access changes still require separate authorization. Human review decides when to merge; this repository has no automatic merging or scheduled coding agent.
 
 ## Local checks
 

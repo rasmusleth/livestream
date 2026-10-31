@@ -51,3 +51,7 @@ Automated tests cover selection by source timestamp, backward seeking, paused cl
 The browser verification covered recorded playback, seeking, pauses, transparency, and stopping/resuming replay output. On 2026-10-25, the user reported following the OBS setup instructions on their Mac and confirmed that everything worked as planned. This establishes a user-reported OBS check of the recorded-playback workflow; it is not validation of live capture or every failure/recovery scenario.
 
 Live capture latency, team-name configuration, manual overrides, and a live-ready graphic are outside this milestone.
+
+## Continuous server-owned input
+
+For recognition that runs without a publishing player tab, start `python3 server.py --mode recording`. The same `/overlay` URL follows the server-owned source. For experimental live camera input and the required exclusive capture setup, follow [live-input instructions](live-input.md). An old player tab cannot publish over a continuous input; the server rejects those updates.

@@ -4,7 +4,7 @@
 
 Convert a camera view of a physical futsal scoreboard into digital scores and game time, suitable for a professional OBS graphic. The match camera remains a separate input to OBS.
 
-The current milestone adds an OBS browser overlay driven by the offline verification player. The next milestone is a live path that retains the same distinction between observations and confirmed state. The product name and broader production features remain open.
+The current milestone adds server-owned continuous recorded input and an experimental macOS camera path, while retaining the distinction between observations and confirmed state. Default replay mode still provides the original offline verification player. The product name and broader production features remain open.
 
 ## Implemented system
 
@@ -52,15 +52,23 @@ The operator explicitly enables replay output in the verification view. While en
 
 If the operator stops output or no update arrives for two seconds, the server marks delivery disconnected and preserves the last reading. The overlay displays a `DATA HELD` badge on disconnected delivery or source readings held for at least one second. Before the first confirmed reading it uses dashes. Server connection failures preserve the displayed values and show a connection warning. Paused video with an active heartbeat remains connected and keeps its exact clock value.
 
-State is in memory and resets on server restart. This proof of concept assumes one publishing operator tab; additional publishing tabs can overwrite each other's positions. The graphic is explicitly labelled `REPLAY`. Browser background throttling can trigger a held-data warning. See `docs/obs-overlay.md` for setup and limitations.
+Replay state is in memory and resets on server restart. This proof of concept assumes one publishing operator tab; additional publishing tabs can overwrite each other's positions. The graphic is explicitly labelled `REPLAY`. Browser background throttling can trigger a held-data warning. See `docs/obs-overlay.md` for setup and limitations.
+
+### Server-owned continuous delivery
+
+`--mode recording` recognizes the source recording as it plays, without precomputed data or a browser publisher. `--mode camera --device NAME` uses the macOS AVFoundation adapter. Both use the existing `FrameReader` and expose confirmed state through `/api/state` to the monitor and overlay. `/api/playback` returns 409 in these modes so another browser cannot overwrite the output.
+
+Camera selection is explicit, audio is disabled, and a filter guard rejects resolution mismatches before using calibration. The camera path processes arriving frames without an `fps` duplication filter; its observation timestamps are monotonic elapsed time. Recording input retains the existing sampled source timeline. A background worker uses bounded frame/diagnostic buffers and cooperatively stops its FFmpeg child.
+
+Missing frames become disconnected after two seconds, and confirmation age increases with time since the last frame. A ten-second frame timeout stops the decoder. EOF and errors preserve the last confirmed values with held status; restarting input currently requires restarting the server. Camera output is labelled `LIVE`, recorded output `REPLAY`. See `docs/live-input.md` for the required single-owner capture arrangement and unvalidated hardware behavior.
 
 ### Current limits
 
-The recording reader supports batch output and continuous JSON-line output, optionally paced at playback speed. Both share recognition and confirmation logic; the continuous path does not accumulate a full recording. It is not yet connected to server state.
+The recording reader supports batch output and continuous JSON-line output, optionally paced at playback speed. Both share recognition and confirmation logic; the continuous path does not accumulate a full recording. The server-owned recording mode connects this recognition path to server state.
 
-The existing viewer/overlay remains an offline, batch-backed process for a fixed 1920×1080 input and one-digit scores. Seeking uses the previously computed source timeline. It is not a live recognition engine and does not provide manual overrides, automatic calibration, or period recognition. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
+Default replay mode remains batch-backed; continuous recording and camera modes drive the same overlay directly. Recognition is calibrated for a fixed 1920×1080 input and one-digit scores. Replay seeking uses the previously computed source timeline. A live adapter is implemented, but live scoreboard accuracy, production latency, and single-owner OBS integration remain unvalidated. Manual overrides, automatic calibration, and period recognition are not implemented. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
 
-## Intended live architecture
+## Live boundaries and remaining work
 
 ```mermaid
 flowchart LR
@@ -74,12 +82,12 @@ flowchart LR
     Overlay --> OBS[OBS browser source]
 ```
 
-These are proposed responsibilities, not modules to create ahead of need:
+The implemented boundaries and remaining responsibilities are:
 
-1. **Input adapter:** provide timestamped frames from recordings or a live source. Confirm the macOS camera connection and OBS capture arrangement before choosing the live integration.
+1. **Input adapter:** provide timestamped frames from recordings or AVFoundation. Capture delivery is tested; production format selection and the single-owner OBS setup still need validation.
 2. **Recognition:** convert frames to observations with uncertainty and diagnostics. Keep camera-specific calibration separate from game state.
 3. **State:** confirm observations, expose freshness, and eventually arbitrate explicit manual overrides and recovery. Define override/resume behavior before implementing it.
-4. **Presentation:** give operators diagnostics and correction controls; give OBS a separate transparent graphic driven by confirmed state.
+4. **Presentation:** provide operator diagnostics and a separate transparent graphic driven by confirmed state. Correction controls remain to be implemented.
 
 Recorded replay should exercise the same recognition and state logic as live input. Separate these responsibilities as the live path requires them; a package migration, event bus, database, hosted backend, and frontend framework are not prerequisites.
 
@@ -88,7 +96,7 @@ Recorded replay should exercise the same recognition and state logic as live inp
 - **Local processing first:** use existing recordings without uploading footage or requiring a cloud service.
 - **Calibrated segment recognition first:** the supplied display has large, fixed LED digits. Broader recognition approaches need comparative evidence before adding complexity.
 - **Keep evidence reviewable:** timestamped raw observations, confirmation status, and source playback are part of the development workflow.
-- **OBS browser output works with recorded replay:** simple local HTTP polling provides the first transport. Integration and timing with a live reader remain undecided until capture is tested on macOS.
+- **OBS browser output uses local HTTP polling:** both replay and continuous server-owned inputs expose confirmed state over the same endpoint. End-to-end live timing remains to be measured.
 - **Capture ownership:** the camera uses a generic USB-C HDMI capture device exposed as `usb video` on the streaming/development Mac. A direct capture succeeded, but OBS was disrupted afterward and recovered after reconnecting the device and restarting OBS. Prefer the reader as the sole owner of the scoreboard input, with OBS consuming the browser overlay. See `docs/live-input.md` for evidence and limits.
 - **Still to establish:** reliable capture configuration, acceptable end-to-end delay, multiple venues, higher scores, clock formats, manual override semantics, and loss/recovery behavior.
 

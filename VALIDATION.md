@@ -49,3 +49,9 @@ The live scoreboard camera reaches OBS through an HDMI capture device. Its model
 The recording reader now supports flushed JSON-line observations and real-time-paced replay. The generated-video test checks that output arrives before the recording completes and matches the batch observations. Regenerating the supplied recording still yields 1,638 samples with 52 uncertain raw readings; recording regression checks remain required.
 
 A three-second video-only FFmpeg capture from `usb video` completed at 1920×1080 using UYVY422. Requested frame-rate configuration fell back to device defaults, so 25 fps operation is unverified. The user reported a green/distorted OBS picture after the capture and confirmed recovery after quitting OBS, reconnecting USB, and reopening OBS. Simultaneous use is not validated; the preferred live design gives the reader sole access to the scoreboard capture input. No video or audio recording was retained. See `docs/live-input.md`.
+
+## Server-owned input: 2026-10-31
+
+The continuous server mode now drives the overlay without a publishing playback tab. All 29 local checks pass, including generated input through confirmed state, frame timeout/cleanup, source-dimension guards, stale data, rejection of conflicting player updates, and the five real-recording regression checks. The real-recording reader remains unchanged and its regressions are rerun for this milestone.
+
+With the user confirming OBS was closed, a short run of the actual camera server received frames from `usb video` and exposed connected state over HTTP. The server stopped automatically via Ctrl+C with exit code 0. The driver reported fallback to a default configuration; requested 25 fps operation remains unverified. This test did not validate live scoreboard accuracy or simultaneous OBS access, and retained no camera footage or audio. Browser checks confirmed continuous recorded values and held-data output at EOF.

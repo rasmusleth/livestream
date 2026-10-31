@@ -8,6 +8,7 @@ import threading
 import unittest
 
 from playback import PlaybackState
+from live import ContinuousState
 from server import Handler
 from test_playback import dataset
 
@@ -36,6 +37,7 @@ class OverlayHTTP(unittest.TestCase):
 
     def setUp(self):
         self.server.playback = PlaybackState(dataset())
+        self.server.source = None
 
     def request(self, method, path, body=None, headers=None):
         connection = http.client.HTTPConnection(*self.server.server_address, timeout=3)
@@ -75,6 +77,19 @@ class OverlayHTTP(unittest.TestCase):
         self.assertEqual(self.request('GET', '/overlay.js')[0], 200)
         self.assertEqual(self.request('GET', '/.git/config')[0], 404)
         self.assertEqual(self.request('POST', '/other', '{}')[0], 404)
+
+    def test_continuous_input_cannot_be_overwritten_by_a_playback_tab(self):
+        self.server.source = ContinuousState('recording', 'test recording')
+        self.server.source.update(dataset()['readings'][1])
+        status, _, body = self.request('GET', '/api/state')
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['values']['clock'], '19:59')
+        status, _, _ = self.request('POST', '/api/playback', '{"position":1.5}',
+                                    {'Content-Type': 'application/json'})
+        self.assertEqual(status, 409)
+        self.assertEqual(self.server.source.snapshot()['values']['away'], 0)
+        self.assertEqual(self.request('GET', '/readings.json')[0], 404)
+        self.assertIn(b'Continuous input', self.request('GET', '/')[2])
 
     def test_video_ranges_still_allow_seeking(self):
         status, headers, body = self.request('GET', '/video', headers={'Range': 'bytes=2-5'})

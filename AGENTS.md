@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Read camera footage of a futsal scoreboard and turn the scores and clock into reliable digital values for an OBS overlay. The current implementation is a local, offline experiment for one calibrated camera position. A transparent OBS browser overlay can follow the recorded verification player. Live camera input and manual corrections are planned, not implemented.
+Read camera footage of a futsal scoreboard and turn the scores and clock into reliable digital values for an OBS overlay. The current implementation is a local prototype for one calibrated camera position. A transparent OBS browser overlay can follow recorded playback, continuous recorded input, or experimental macOS camera input. Live scoreboard recognition accuracy still needs validation against the actual camera framing; manual corrections are not implemented.
 
 Read `README.md` for setup, `docs/architecture.md` for current and intended boundaries, and `VALIDATION.md` for evidence and limits. Read `docs/development.md` before changing the workflow.
 
@@ -15,7 +15,8 @@ Read `README.md` for setup, `docs/architecture.md` for current and intended boun
 - Keep processing local by default. Do not upload footage or add external services without the user's authorization.
 - Keep recordings, generated readings, credentials, and large binary artifacts out of Git. Synthetic test inputs should be generated during tests.
 - Update the relevant docs when changing behavior, calibration, setup, or architectural decisions. Distinguish implemented features from planned ones.
-- Do not merge, release, publish, or change repository access unless the user authorizes that action. Opening a draft PR is appropriate for requested implementation work.
+- After a completed, validated coding task, push the feature branch and open or update a draft PR when there is a meaningful change ready for review. This is the user’s standing preference; do not ask again unless the scope or destination is unclear. Honor explicit requests to keep work local.
+- Leave merging to the user. Do not merge, release, deploy, or change repository access without separate authorization.
 
 ## Scoreboard correctness
 
