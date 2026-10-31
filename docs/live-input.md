@@ -52,14 +52,14 @@ At the end of the file, the final values are held and explicitly marked disconne
 
 1. Quit OBS before starting a hardware test. Keep other applications from opening the scoreboard capture device.
 2. Connect and power the camera and HDMI capture device.
-3. Ensure the live camera view matches `calibration.json` in both resolution and framing. The current calibration was made from the supplied scoreboard recording. Merely obtaining 1920×1080 frames does not establish matching framing or recognition accuracy.
+3. Use the expected 1920×1080 input resolution. The reference calibration was made from the supplied recording; if framing differs, calibrate it in the monitor after starting the server. Matching resolution alone does not establish correct framing or recognition accuracy.
 4. Start the reader with the exact named video input:
 
 ```sh
 python3 server.py --mode camera --device 'usb video'
 ```
 
-5. Open `http://127.0.0.1:8765` to inspect the preview and input diagnostics. Match the six digit boxes to the clock/scores and the yellow probes to the LED segments. Use the guide checkboxes for an unobstructed view. Freeze the preview for inspection; recognition and overlay updates continue. Resume to check current framing. Guides are read-only; a different framing needs a separately validated calibration. The camera graphic is labelled `LIVE`; the recording graphic is labelled `REPLAY`.
+5. Open `http://127.0.0.1:8765` to inspect the preview and input diagnostics. Match the six digit boxes to the clock/scores and the yellow probes to the LED segments. Use the guide checkboxes for an unobstructed view. Freeze the preview for inspection; recognition and overlay updates continue. Resume to check current framing. If framing differs, use **Calibrate this camera setup → Align whole scoreboard · 4 corners** to mark the central clock-and-scores panel (excluding the numbered side panels). This maps all digits and probes together; use optional fine adjustments only where needed. See the README calibration walkthrough; save locally, then restart with `--calibration data/calibration.local.json`. Validate the activated readings against the scoreboard before relying on them. The camera graphic is labelled `LIVE`; the recording graphic is labelled `REPLAY`.
 6. For OBS integration, use a scene collection with the match camera and Browser overlay but no raw scoreboard `USB video` capture source. Keep the previous scene collection as a backup. The reader must remain the sole owner of the scoreboard capture input.
 7. Use `http://127.0.0.1:8765/overlay` as a 1920×1080 Browser source. Keep the server running; the monitor tab is optional.
 8. Press Ctrl+C in the server terminal to stop recognition and release the device. If input fails or stalls, inspect diagnostics and restart deliberately after resolving the cause. There is no automatic device reconnection.
@@ -70,11 +70,11 @@ The camera adapter uses AVFoundation with an explicit device name and UYVY422 in
 
 ## Alignment preview
 
-Continuous recording and camera modes show a half-resolution preview (960×540 for this calibration), updated up to twice per second. It comes from the same FFmpeg process as recognition and does not open the device again. The monitor overlays the active calibration's digit boxes and seven probe centers per digit. `/api/calibration` is read-only and exposes only the active profile; it does not edit the file.
+Continuous recording and camera modes show a half-resolution preview (960×540 for this calibration), updated up to twice per second. It comes from the same FFmpeg process as recognition and does not open the device again. The monitor overlays the active calibration's digit boxes and seven probe centers per digit. `GET /api/calibration` exposes only the active profile. Draft edits are checked and saved through separate POST endpoints without modifying the running reader.
 
 The preview displays frame age. Freezing holds only the browser image while capture, recognition, and the OBS overlay continue. EOF, disconnection, or an HTTP failure leaves the last image visible with held/error status and increasing age. Preview and recognition update at different rates, so they are not a frame-exact comparison tool. Before the first frame, the preview remains empty.
 
-Full input frames are resized for display while a separate branch preserves the original crop/scale recognition path. These are packed into one bounded raw frame from one decoder. Only the latest preview is retained in memory; `/api/preview` serves RGB pixels on loopback with caching disabled. No frames are saved or uploaded. Continuous modes require even integer reference dimensions and crop coordinates/sizes, with the crop contained in the reference image. Incompatible profiles fail before capture starts. There is no interactive calibration editor yet.
+Full input frames are resized for display while a separate branch preserves the original crop/scale recognition path. These are packed into one bounded raw frame from one decoder. Only the latest preview is retained in memory; `/api/preview` serves RGB pixels on loopback with caching disabled. No frames are saved or uploaded. Continuous modes require even integer reference dimensions and crop coordinates/sizes, with the crop contained in the reference image. Incompatible profiles fail before capture starts. The local editor can map all six digits and 42 probes from four corners of the central panel, using the known layout and a perspective transform. Optional per-digit corner marking and individual probe placement remain available. An on-screen schematic identifies the required physical panel corners. Legacy profiles without a panel outline need the tracked reference profile for the shortcut. Checks inspect the latest preview without publishing output; saving replaces the ignored local profile and requires restarting to activate it. It does not track a moving camera. See the README for the complete workflow.
 
 ## Freshness and shutdown
 
@@ -94,7 +94,7 @@ Browser verification of continuous recorded input covered the monitor, independe
 
 ## Remaining work
 
-1. Use the alignment preview to validate actual live scoreboard framing and recognition. Add calibration editing if the current profile cannot be matched.
+1. Use the local calibration editor to align the actual live scoreboard and validate recognition after activating the saved profile.
 2. Establish a suitable capture configuration without driver fallback.
 3. Test OBS with the reader owning the scoreboard input and OBS using only its browser overlay.
 4. Measure end-to-end delay and test signal loss/recovery with the real setup.
