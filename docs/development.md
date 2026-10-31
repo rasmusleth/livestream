@@ -30,6 +30,8 @@ python3 scripts/check.py
 
 Five recording regression tests run when generated readings exist and are explicitly skipped otherwise. CI has no private recording or generated readings and reports these skips. For UI changes, run `python3 server.py` and manually check playback, seeking, and the extracted values. For overlay changes, also check the separate overlay page while seeking, pausing, stopping replay output, and recovering the connection. Add evidence to the PR when useful.
 
+The offline comparison scripts in `experiments/` have optional packages and a separate seven-test suite. They are compiled by `scripts/check.py` but their dependency-requiring tests are not part of the application CI job. Run them with the isolated environment described in [experiments/README.md](../experiments/README.md); report those results separately. Private video/annotation comparisons are local experiments and do not run in CI.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on PRs to any branch (including stacked PRs), pushes to `main`, and manual dispatch. It does not use path filters, so documentation-only PRs also produce the required result.

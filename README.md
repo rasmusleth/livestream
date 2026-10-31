@@ -129,3 +129,8 @@ python3 server.py --mode camera --device 'usb video' --port 8771 --calibration d
 ```
 
 Keep OBS from capturing the same device. Check several visible clock and score values after restarting; fresh repeated observations are required before output is confirmed. Repeat calibration after moving the camera. This setup step does not automatically locate or track the scoreboard, compensate for LED flicker/exposure, or establish live recognition accuracy.
+
+
+## Offline recognition comparison
+
+An isolated experiment compares the existing probes, a rectified whole-digit reader, and local Tesseract OCR on both recordings. The candidate improves reading coverage but still has failures under deliberate framing errors; it is not enabled in the server or OBS overlay. See [findings and limitations](docs/recognition-comparison.md) and [reproduction instructions](experiments/README.md). Optional experiment packages do not change application setup.

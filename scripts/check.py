@@ -38,7 +38,7 @@ def main():
         if shutil.which(tool) is None:
             raise SystemExit(f'Missing required development tool: {tool}')
     paths = list(ROOT.glob('*.py'))
-    for folder in ('scripts', 'tests'):
+    for folder in ('scripts', 'tests', 'experiments'):
         paths.extend((ROOT / folder).rglob('*.py'))
     for path in paths:
         compile(path.read_text(encoding='utf-8'), str(path), 'exec')
