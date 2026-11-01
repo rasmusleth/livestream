@@ -7,6 +7,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
+import threading
+from unittest.mock import patch
 
 from capture import capture_rows, recording_command
 from live import ContinuousState, InputWorker
@@ -96,6 +99,25 @@ class VideoPipeline(unittest.TestCase):
             self.assertEqual(snapshot['values'], goal)
             self.assertFalse(snapshot['running'])
             self.assertFalse(snapshot['connected'])
+            # Shadow packing has one decoder, the same full source frame, and
+            # byte-for-byte identical established reader output.
+            shadow_frames = []
+            previews = []
+            def shadow_frame(payload, t):
+                self.assertEqual(len(payload), width*height*3)
+                shadow_frames.append((t,hashlib.sha256(payload).hexdigest()))
+            actual_popen = subprocess.Popen
+            command = recording_command(video, config, preview=True, shadow=True, realtime=False)
+            with patch('capture.subprocess.Popen', wraps=actual_popen) as opened:
+                shadow_rows = list(capture_rows(command, config, threading.Event(),
+                    preview=lambda frame,w,h: previews.append((len(frame),w,h)), shadow=shadow_frame))
+            self.assertEqual(opened.call_count,1)
+            self.assertEqual(shadow_rows, data['readings'])
+            self.assertEqual([t for t,_ in shadow_frames],[row['t'] for row in shadow_rows])
+            expected_last = (folder/'05.ppm').read_bytes().split(b'\n',3)[3]
+            self.assertEqual(shadow_frames[-1][1],hashlib.sha256(expected_last).hexdigest())
+            self.assertTrue(previews)
+            self.assertTrue(all(item == (960*540*3,960,540) for item in previews))
             rows = data['readings']
             at = lambda t: rows[round(t * data['fps'])]
             self.assertEqual(len(rows), 12)

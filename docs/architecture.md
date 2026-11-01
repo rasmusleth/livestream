@@ -36,7 +36,7 @@ flowchart LR
 
 The initial development target is macOS with Python 3.12; CI uses macOS 26. Other operating systems and Python versions are outside the current support scope.
 
-The implementation uses Python's standard library, FFmpeg/ffprobe, and plain browser HTML/CSS/JavaScript. Node.js is a development tool for JavaScript syntax checks, not an application runtime.
+The default implementation uses Python's standard library, FFmpeg/ffprobe, and plain browser HTML/CSS/JavaScript. Opt-in region shadow mode additionally needs the packages pinned in `requirements-shadow.txt`. Node.js is a development tool for JavaScript syntax checks, not an application runtime.
 
 ### State semantics
 
@@ -90,7 +90,15 @@ Default replay mode remains batch-backed; continuous recording and camera modes 
 
 `experiments/` compares the current reader with rectified whole-digit regions and local Tesseract. It uses optional isolated OpenCV/NumPy packages and never publishes state, opens a camera, or changes the runtime reader. The normal repository check compiles these files without importing the optional packages; experiment tests run separately. The region candidate adds padded observation windows, rejects boundary contact and ambiguous shapes before normalization, and records per-digit rejection evidence. Translation stress runs include short windows with separate confirmation history and truth only at reviewed anchors. See [comparison evidence and limits](recognition-comparison.md), including the fixed shifted-score example and coverage loss, before proposing runtime integration.
 
-The standard-library `candidate_state.py` is imported only by experiments and tests. It parses one observed clock in an explicit selected layout and confirms home, away and clock independently, retaining per-field age, status and reasons. Three timed observations can confirm countdown progression, including tenths, without generating unseen values. Unknown digits never select another layout. Offline reports retain legacy comparison rows separately from the new independent field rows. See [rules and limits](candidate-confirmation.md), especially the lack of real-footage tenths confirmation. Monitor shadow integration remains pending; the default runtime path is unchanged.
+The standard-library `candidate_state.py` is used by experiments, tests and the explicitly enabled shadow reader. It parses one observed clock in an explicit selected layout and confirms home, away and clock independently, retaining per-field age, status and reasons. Three timed observations can confirm countdown progression, including tenths, without generating unseen values. Unknown digits never select another layout. Offline reports retain legacy comparison rows separately from the new independent field rows. See [rules and limits](candidate-confirmation.md), especially the lack of real-footage tenths confirmation. The opt-in monitor path exposes these diagnostics separately; the default runtime path is unchanged.
+
+### Opt-in shadow comparison
+
+`--shadow-regions` adds a full-resolution RGB branch to the continuous input's single FFmpeg decoder. The unchanged preview and recognition branches plus the full frame are padded to source width and stacked. Python unpacks each once and passes the full frame to `shadow.ShadowReader`, which shares `region_reader.RegionReader` with offline experiments and feeds independent candidate state. Optional packages load only on explicit opt-in. A processing exception stops candidate recognition and retains diagnostics without terminating the established reader.
+
+`ContinuousState` keeps latest candidate diagnostics separately, exposed through read-only `/api/shadow`. Candidate values never enter `/api/state`; there is no promotion/write endpoint. The monitor displays observed/confirmed values and freshness per field, plus layout and rejection evidence. EOF/loss increases age and holds values, and HTTP loss clears displayed freshness claims. Calibration edits do not activate in either reader until restart.
+
+Fixed explicit layouts are supported; reviewed recorded-input layout schedules are rejected for camera input. The larger packed frames and synchronous recognition add transport/processing cost. Camera shadow throughput and live delay have not been validated. See [setup, boundary evidence and limitations](shadow-reader.md). No candidate output is enabled by this milestone.
 
 ## Live boundaries and remaining work
 

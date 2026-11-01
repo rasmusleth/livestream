@@ -1,6 +1,6 @@
 # Experimental independent candidate state
 
-`candidate_state.py` implements the next offline stage toward the shadow reader. Only experiments and tests import it. The running server, original reader, monitor and OBS overlay still use their existing path. The module uses the standard library; OpenCV/NumPy remain optional experiment dependencies. No camera was opened for this stage.
+`candidate_state.py` implements independent experimental candidate state. It is used by experiments, tests and the explicitly enabled [monitor shadow reader](shadow-reader.md). The original reader and OBS output keep their existing path. The module uses the standard library; opt-in region recognition needs optional image packages. The local evidence below records the preceding offline stage; the shadow guide records integration validation.
 
 ## Explicit layouts
 
@@ -48,4 +48,4 @@ At the 11 original and 15 new reused reviewed timestamps, no fresh field confirm
 
 The new recording's 89 samples from 42.5 s onward produce **zero available or confirmed tenths clocks**: foreground boundary/fragment rejection still prevents a complete clock observation. The timed progression rule succeeds on synthetic evidence, but real-footage tenths confirmation is not demonstrated. Do not lower glyph safeguards to hide this failure. The new scores can still confirm independently during this interval.
 
-Monitor shadow integration and its visual/OBS-boundary demonstration remain pending. No hardware check, live latency claim, automatic candidate output, or new runtime dependency is included in this stage. The next step is to expose these per-field diagnostics in an opt-in monitor path using the same source frames as the existing reader, then address the visible glyph failures with reviewed evidence.
+At completion of this offline stage, monitor integration was pending. It is now available as a separate opt-in [shadow comparison](shadow-reader.md), with recorded-input boundary validation. No hardware check, live latency claim, automatic candidate output, or new runtime dependency is included in this stage. The remaining recognition work is to address the visible glyph failures with reviewed evidence before considering candidate output.

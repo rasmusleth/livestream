@@ -1,10 +1,11 @@
 """Server-owned continuous scoreboard state and input-worker lifetime."""
 import threading
 import time
+import copy
 
 
 class ContinuousState:
-    def __init__(self, mode, source, clock=time.monotonic):
+    def __init__(self, mode, source, clock=time.monotonic, *, shadow=False):
         self.mode, self.source, self.clock = mode, source, clock
         self.lock = threading.Lock()
         self.row = None
@@ -15,6 +16,30 @@ class ContinuousState:
         self.preview = None
         self.preview_seen = None
         self.preview_sequence = 0
+        self.shadow_enabled = shadow
+        self.shadow_row = None
+        self.shadow_seen = None
+
+    def update_shadow(self, row):
+        with self.lock:
+            self.shadow_row = copy.deepcopy(row)
+            self.shadow_seen = self.clock()
+
+    def shadow_snapshot(self):
+        with self.lock:
+            elapsed = None if self.shadow_seen is None else max(0, self.clock()-self.shadow_seen)
+            result = copy.deepcopy(self.shadow_row)
+            connected = self.running and elapsed is not None and elapsed < 2
+            if result:
+                for field in result['fields'].values():
+                    if field['age'] is not None:
+                        field['age'] = round(field['age']+elapsed,3)
+                        field['stale'] = field['age'] >= 1
+                    if not connected:
+                        field['status'] = 'held' if field['value'] is not None else 'unknown'
+                        field['reason'] = 'input_ended' if not self.running else 'no_new_frame'
+            return {'enabled':self.shadow_enabled, 'output_enabled':False, 'connected':connected,
+                    'delivery_age':elapsed, 'running':self.running, 'candidate':result}
 
     def update(self, row):
         with self.lock:

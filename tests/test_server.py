@@ -53,6 +53,7 @@ class OverlayHTTP(unittest.TestCase):
                                        {'Content-Type': 'application/json'})
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)['values']['away'], 1)
+
         status, headers, body = self.request('GET', '/api/state')
         self.assertEqual(status, 200)
         self.assertEqual(headers['Cache-Control'], 'no-store')
@@ -62,6 +63,22 @@ class OverlayHTTP(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(json.loads(body)['connected'])
         self.assertEqual(json.loads(body)['values']['away'], 1)
+
+    def test_shadow_has_no_output_write_path(self):
+        self.assertEqual(self.request('GET','/api/shadow')[0],404)
+        self.server.source = ContinuousState('recording','fixture',shadow=True)
+        self.server.source.update(dataset()['readings'][1])
+        before = json.loads(self.request('GET','/api/state')[2])['values']
+        self.server.source.update_shadow({'t':.1,'fields':{
+            'home':{'observed':9,'value':9,'age':0,'status':'confirmed','stale':False,'reason':None}}})
+        status,headers,body=self.request('GET','/api/shadow')
+        self.assertEqual(status,200)
+        self.assertEqual(headers['Cache-Control'],'no-store')
+        self.assertFalse(json.loads(body)['output_enabled'])
+        self.assertEqual(json.loads(body)['candidate']['fields']['home']['value'],9)
+        self.assertEqual(json.loads(self.request('GET','/api/state')[2])['values'],before)
+        for route in ('/api/shadow','/api/shadow/promote'):
+            self.assertEqual(self.request('POST',route,'{}',{'Content-Type':'application/json'})[0],404)
 
     def test_invalid_or_cross_origin_updates_are_rejected(self):
         for body in ('{}', 'not json', '{"position":-1}', '{"position":NaN}', '{"position":true}'):

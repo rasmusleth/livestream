@@ -20,15 +20,19 @@ def preview_dimensions(config):
     return width//2, height//2
 
 
-def recognition_crop(frame, config):
+def recognition_crop(frame, config, *, shadow=False):
     """Unpack the padded recognition image below the display image."""
     width, height = preview_dimensions(config)
+    if shadow:
+        width *= 2
     w, h = (value//2 for value in config['crop'][2:])
     return b''.join(frame[((height+row)*width)*3:((height+row)*width+w)*3] for row in range(h))
 
 
-def frame_filter(config, *, camera=False, preview=False):
+def frame_filter(config, *, camera=False, preview=False, shadow=False):
     x, y, width, height = config['crop']
+    if shadow and not preview:
+        raise ValueError('Shadow input requires preview packing')
     if preview:
         preview_w, preview_h = preview_dimensions(config)
         if camera:
@@ -38,6 +42,13 @@ def frame_filter(config, *, camera=False, preview=False):
             guard = f"fps={config['sample_fps']},"
         # Pack an unchanged recognition crop below the preview in one raw frame.
         # Both branches share the same decoded input and capture device.
+        if shadow:
+            packed_w = config['reference_size'][0]
+            return (f'{guard}split=3[p][r][s];[p]scale={preview_w}:{preview_h},'
+                    f'format=rgb24,pad={packed_w}:{preview_h}:0:0[pv];'
+                    f'[r]crop={width}:{height}:{x}:{y},scale={width//2}:{height//2},'
+                    f'format=rgb24,pad={packed_w}:{height//2}:0:0[rv];'
+                    '[s]format=rgb24[sv];[pv][rv][sv]vstack=inputs=3')
         return (f'{guard}split=2[p][r];[p]scale={preview_w}:{preview_h},format=rgb24[pv];'
                 f'[r]crop={width}:{height}:{x}:{y},scale={width//2}:{height//2},'
                 f'format=rgb24,pad={preview_w}:{height//2}:0:0[rv];[pv][rv]vstack=inputs=2')
@@ -49,7 +60,7 @@ def frame_filter(config, *, camera=False, preview=False):
     return f"fps={config['sample_fps']},crop={width}:{height}:{x}:{y},scale={width//2}:{height//2}"
 
 
-def camera_command(config, device, capture_fps=25, *, preview=False):
+def camera_command(config, device, capture_fps=25, *, preview=False, shadow=False):
     if not device or not device.strip() or ':' in device or device.isdecimal() or device in ('default', 'none'):
         raise ValueError('Select an explicit video device name, without an audio device or index')
     if not math.isfinite(capture_fps) or capture_fps <= 0:
@@ -58,21 +69,27 @@ def camera_command(config, device, capture_fps=25, *, preview=False):
     return ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-nostdin',
             '-f', 'avfoundation', '-framerate', str(capture_fps), '-video_size', f'{width}x{height}',
             '-pixel_format', 'uyvy422', '-i', f'{device}:none', '-an',
-            '-vf', frame_filter(config, camera=True, preview=preview), '-fps_mode', 'passthrough',
+            '-vf', frame_filter(config, camera=True, preview=preview, shadow=shadow), '-fps_mode', 'passthrough',
             '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']
 
 
-def recording_command(video, config, *, preview=False, realtime=True):
+def recording_command(video, config, *, preview=False, realtime=True, shadow=False):
     probe_recording(video, config)
     return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', *(['-re'] if realtime else []), '-i', str(video), '-an',
-            '-vf', frame_filter(config, preview=preview), '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']
+            '-vf', frame_filter(config, preview=preview, shadow=shadow), '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']
 
 
-def capture_rows(command, config, stop, *, camera=False, diagnostic=lambda text: None, frame_timeout=10, preview=None):
+def capture_rows(command, config, stop, *, camera=False, diagnostic=lambda text: None, frame_timeout=10, preview=None, shadow=None):
     """Yield actual camera frames or sampled recording frames; terminate on stalls/stop."""
     reader = FrameReader(config)
     dimensions = preview_dimensions(config) if preview is not None else None
     frame_size = dimensions[0]*(dimensions[1]+config['crop'][3]//2)*3 if dimensions else reader.frame_size
+    if shadow is not None:
+        if dimensions is None:
+            raise ValueError('Shadow input requires a preview callback')
+        packed_width = config['reference_size'][0]
+        full_start = packed_width*(dimensions[1]+config['crop'][3]//2)*3
+        frame_size = full_start + packed_width*config['reference_size'][1]*3
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     tail = bytearray()
 
@@ -110,9 +127,16 @@ def capture_rows(command, config, stop, *, camera=False, diagnostic=lambda text:
                     now = time.monotonic()
                     t = round(now - start, 3) if camera else round(index / config['sample_fps'], 3)
                     if dimensions and (last_preview is None or now-last_preview >= .5):
-                        preview(bytes(buffer[:dimensions[0]*dimensions[1]*3]), *dimensions)
+                        if shadow is not None:
+                            pixels = b''.join(buffer[row*packed_width*3:(row*packed_width+dimensions[0])*3]
+                                              for row in range(dimensions[1]))
+                        else:
+                            pixels = bytes(buffer[:dimensions[0]*dimensions[1]*3])
+                        preview(pixels, *dimensions)
                         last_preview = now
-                    frame = recognition_crop(buffer, config) if dimensions else buffer
+                    frame = recognition_crop(buffer, config, shadow=shadow is not None) if dimensions else buffer
+                    if shadow is not None:
+                        shadow(bytes(buffer[full_start:]), t)
                     yield reader.read(frame, t)
                     buffer.clear()
                     index += 1

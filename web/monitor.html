@@ -23,6 +23,16 @@
 <p class="hint">This is a setup step for a stationary camera. It does not track movement. A check uses the latest server frame, even if this preview is frozen. It is one observation, not a confirmed or accuracy-tested reading. Save writes data/calibration.local.json; restart the server with that profile to use it.</p></details><div class="details"><div><span>Source</span><b id="source">—</b></div><div><span>Position / elapsed</span><b id="position">—</b></div><div><span>Last frame</span><b id="delivery">—</b></div><div><span>Last confirmation</span><b id="age">—</b></div></div><p id="input-note" class="hint"></p><details><summary>Input diagnostics</summary><pre id="diagnostics">No diagnostics.</pre></details></section>
 <section class="panel output"><h2>Confirmed output</h2><div id="status" role="status">Waiting for input</div><div class="teams"><div><span>HOME</span><strong id="home">—</strong></div><b>:</b><div><span>AWAY</span><strong id="away">—</strong></div></div><div id="clock">--:--</div><p class="hint">The game clock is read from footage. Missing input holds the last confirmed values and is flagged.</p></section>
 </div>
+<section class="panel shadow-panel" aria-labelledby="shadow-title">
+<h2 id="shadow-title">Region candidate · comparison only</h2>
+<p id="shadow-status" role="status">Checking candidate status…</p>
+<p class="hint">OBS continues to use the confirmed output above. Candidate readings cannot be sent to OBS.</p>
+<div id="shadow-content" hidden>
+<p id="shadow-layout" class="hint"></p>
+<div class="shadow-scroll"><table class="shadow-table"><thead><tr><th>Field</th><th>Observed</th><th>Confirmed candidate</th><th>Status / age</th><th>Reason</th></tr></thead><tbody id="shadow-fields"></tbody></table></div>
+<p id="shadow-timing" class="hint"></p>
+<details><summary>Candidate digit diagnostics</summary><pre id="shadow-evidence"></pre></details>
+</div></section>
 <section class="panel overlay-controls"><h2>OBS browser source</h2><a href="/overlay" target="_blank" rel="noopener">Open transparent overlay ↗</a><p>Use a 1920 × 1080 Browser source in OBS, above the match footage.</p><label for="overlay-url">Overlay URL</label><input id="overlay-url" type="text" readonly><p class="hint">Camera mode requires the reader to be the sole owner of the scoreboard capture device. OBS should consume the digital overlay.</p></section>
 <footer>Continuous input · Stop the server to release the input · Manual corrections are planned.</footer>
 </main><script src="/monitor.js"></script><script src="/calibrate.js"></script></body></html>
