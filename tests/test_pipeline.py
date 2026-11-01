@@ -29,7 +29,8 @@ class VideoPipeline(unittest.TestCase):
         tick = {'clock': '19:59', 'home': 0, 'away': 0}
         goal = {'clock': '19:59', 'home': 0, 'away': 1}
         # Each source frame lasts .2s; the reader samples at 10 Hz.
-        states = [initial, initial, tick, None, goal, goal]
+        states = [initial, initial, tick, None, goal, goal,
+                  dict(goal, white_conflict=True), goal]
         with tempfile.TemporaryDirectory(prefix='livestream-test-') as directory:
             folder = Path(directory)
             for number, state in enumerate(states):
@@ -44,6 +45,14 @@ class VideoPipeline(unittest.TestCase):
                             for py in range(y - 9, y + 10):
                                 start = (py * width + x - 9) * 3
                                 pixels[start:start + 19 * 3] = bytes((255, 160, 160)) * 19
+                    if state.get('white_conflict'):
+                        # A zero whose white lower-left LED is excluded by the
+                        # colour test, with red centre glow falsely resembling 9.
+                        for segment, rgb in ((4, (250, 250, 250)), (6, (228, 97, 126))):
+                            x, y = config['segment_centers']['home'][segment]
+                            for py in range(y - 9, y + 10):
+                                start = (py * width + x - 9) * 3
+                                pixels[start:start + 19 * 3] = bytes(rgb) * 19
                 (folder / f'{number:02}.ppm').write_bytes(f'P6\n{width} {height}\n255\n'.encode() + pixels)
             video = folder / 'generated.mkv'
             subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-framerate', '5',
@@ -114,13 +123,13 @@ class VideoPipeline(unittest.TestCase):
             self.assertEqual(opened.call_count,1)
             self.assertEqual(shadow_rows, data['readings'])
             self.assertEqual([t for t,_ in shadow_frames],[row['t'] for row in shadow_rows])
-            expected_last = (folder/'05.ppm').read_bytes().split(b'\n',3)[3]
+            expected_last = (folder/'07.ppm').read_bytes().split(b'\n',3)[3]
             self.assertEqual(shadow_frames[-1][1],hashlib.sha256(expected_last).hexdigest())
             self.assertTrue(previews)
             self.assertTrue(all(item == (960*540*3,960,540) for item in previews))
             rows = data['readings']
             at = lambda t: rows[round(t * data['fps'])]
-            self.assertEqual(len(rows), 12)
+            self.assertEqual(len(rows), 16)
             self.assertEqual(at(0)['status'], 'unknown')
             self.assertIsNone(at(0)['values'])
             self.assertEqual(at(.1)['values'], initial)
@@ -136,6 +145,14 @@ class VideoPipeline(unittest.TestCase):
             self.assertEqual(at(.9)['values'], goal)
             self.assertEqual(at(.9)['status'], 'confirmed')
             self.assertEqual(at(.9)['age'], 0)
+            for t in (1.2, 1.3):
+                self.assertIsNone(at(t)['raw'])
+                self.assertEqual(at(t)['values'], goal)
+                self.assertEqual(at(t)['status'], 'held')
+                self.assertAlmostEqual(at(t)['age'], t - 1.1)
+                self.assertIn('home', at(t)['rejections'])
+            self.assertEqual(at(1.4)['status'], 'held')
+            self.assertEqual(at(1.5)['status'], 'confirmed')
             self.assertEqual(rows[-1]['values'], goal)
 
 

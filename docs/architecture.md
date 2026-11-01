@@ -40,7 +40,7 @@ The default implementation uses Python's standard library, FFmpeg/ffprobe, and p
 
 ### State semantics
 
-Each row has a source-relative timestamp `t` and a `raw` reading, which may be null. A reading contains `home`, `away`, and a `clock` string in `MM:SS` format. The recognizer rejects incomplete patterns and invalid seconds.
+Each row has a source-relative timestamp `t` and a `raw` reading, which may be null. A reading contains `home`, `away`, and a `clock` string in `MM:SS` format. The recognizer rejects incomplete patterns and invalid seconds. It also [rejects contradictory white-core evidence](probe-core-rejection.md): an apparently off colour probe with substantial neutral white light makes its digit unavailable. Rows expose `white_segments` and per-digit `rejections` alongside the existing colour `segments`. This veto never fills in strokes or selects a replacement value.
 
 Two successive matching non-null readings confirm the output. `values` contains the most recently confirmed reading, or null before the first confirmation. `status` is `unknown`, `held`, or `confirmed`; `age` measures source seconds since the last confirmation. The viewer marks a hold of at least one second as stale. It never advances the match clock independently.
 
