@@ -109,7 +109,6 @@ python3 server.py --mode camera --device 'usb video'
 
 Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. The monitor shows a preview with digit regions and segment probes, plus a local calibration editor for adapting them to the camera framing. Its freeze button holds the image while recognition and the overlay continue. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.
 
-
 ### Adapt calibration to a new camera position
 
 Open **Calibrate this camera setup** in the continuous monitor and choose **Align whole scoreboard · 4 corners**. The preview freezes. Mark the outer corners of the **central panel containing the clock and both scores**, excluding the numbered side panels, in this order: top left, top right, bottom right, bottom left. The on-screen schematic identifies the panel. For rounded corners, click where the straight edges would meet.
@@ -129,3 +128,7 @@ python3 server.py --mode camera --device 'usb video' --port 8771 --calibration d
 ```
 
 Keep OBS from capturing the same device. Check several visible clock and score values after restarting; fresh repeated observations are required before output is confirmed. Repeat calibration after moving the camera. This setup step does not automatically locate or track the scoreboard, compensate for LED flicker/exposure, or establish live recognition accuracy.
+
+## Offline recognition comparison
+
+An isolated experiment compares the existing probes, a rectified whole-digit reader, and local Tesseract OCR on both recordings. The candidate improves reading coverage but still has failures under deliberate framing errors; it is not enabled in the server or OBS overlay. See [findings and limitations](docs/recognition-comparison.md) and [reproduction instructions](experiments/README.md). Optional experiment packages do not change application setup.

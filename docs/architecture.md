@@ -86,6 +86,10 @@ The recording reader supports batch output and continuous JSON-line output, opti
 
 Default replay mode remains batch-backed; continuous recording and camera modes drive the same overlay directly. Recognition is calibrated for a fixed 1920×1080 input and one-digit scores. Replay seeking uses the previously computed source timeline. A live adapter is implemented, but live scoreboard accuracy, production latency, and single-owner OBS integration remain unvalidated. Manual overrides, automatic calibration, and period recognition are not implemented. Accuracy across new venues, score digits, lighting, and camera movement is unmeasured. See `VALIDATION.md` for recording-specific evidence.
 
+### Offline recognition experiments
+
+`experiments/` compares the current reader with rectified whole-digit regions and local Tesseract. It uses optional isolated OpenCV/NumPy packages and never publishes state, opens a camera, or changes the runtime reader. The normal repository check compiles these files without importing the optional packages; experiment tests run separately. See [comparison evidence and limits](recognition-comparison.md) before proposing runtime integration. Candidate coverage and sparse reviewed correctness are distinct; the prototype still fails a deliberate framing-error case.
+
 ## Live boundaries and remaining work
 
 ```mermaid
