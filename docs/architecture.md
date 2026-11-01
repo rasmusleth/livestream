@@ -94,6 +94,8 @@ Candidate score patches with sufficient observed white pixels use a [core-aware 
 
 The standard-library `candidate_state.py` is used by experiments, tests and the explicitly enabled shadow reader. It parses one observed clock in an explicit selected layout and confirms home, away and clock independently, retaining per-field age, status and reasons. Three timed observations can confirm countdown progression, including tenths, without generating unseen values. Unknown digits never select another layout. Offline reports retain legacy comparison rows separately from the new independent field rows. See [rules and limits](candidate-confirmation.md), including the remaining exposure and framing limits. The opt-in monitor path exposes these diagnostics separately; the default runtime path is unchanged.
 
+The offline [generated exposure runner](candidate-exposure-stress.md) sends independent RGB score drawings through the shared candidate recognition and state modules. Its clean, mixed, missing and recovery phases retain different truth semantics; it never publishes output. This is validation tooling, not a runtime exposure detector.
+
 ### Opt-in shadow comparison
 
 `--shadow-regions` adds a full-resolution RGB branch to the continuous input's single FFmpeg decoder. The unchanged preview and recognition branches plus the full frame are padded to source width and stacked. Python unpacks each once and passes the full frame to `shadow.ShadowReader`, which shares `region_reader.RegionReader` with offline experiments and feeds independent candidate state. Optional packages load only on explicit opt-in. A processing exception stops candidate recognition and retains diagnostics without terminating the established reader.
