@@ -137,4 +137,6 @@ The candidate uses [explicit clock layouts and independent confirmation](docs/ca
 
 The [per-field exposure audit](docs/exposure-validation.md) includes unreadable source fields separately from readable correctness. Some ambiguous transition frames still receive fresh candidate confirmations; those remain unresolved validation risks.
 
+A later [monitor recapture](docs/mock-capture-validation.md) exposes confirmed score errors in both readers, including visible zeros read as eights by the candidate. Neither reader is validated for that setup; fixing these demonstrated failures precedes further live-output testing.
+
 An [opt-in monitor comparison](docs/shadow-reader.md) is now available with `--mode recording --shadow-regions` and optional local image packages. It processes the same input frames as the established reader, shows per-field candidate diagnostics and never changes OBS output. Shadow mode is off by default. Camera shadow throughput and live recognition still need a coordinated hardware check.
