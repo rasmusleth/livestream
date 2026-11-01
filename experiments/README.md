@@ -10,7 +10,7 @@ python3 -m venv /tmp/livestream-recognition-venv
 /tmp/livestream-recognition-venv/bin/python -m unittest discover -s experiments -p 'test_*.py' -v
 ```
 
-OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 21 experiment tests require this environment and are run separately.
+OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 27 experiment tests require this environment and are run separately.
 
 Keep recordings, local profiles, labels, and outputs in ignored local paths. The original benchmark uses tracked `calibration.json`; the new one needs the saved profile matching its framing. Preserve a copy of that profile before further edits. Our local copy is `data/recognition-live-calibration.json`; do not substitute a calibration made for another framing.
 
@@ -82,4 +82,17 @@ Inputs must have matching video hash/rate and unique exact-grid review timestamp
 
 The [monitor recapture benchmark](../docs/mock-capture-validation.md) adds a third local recording, a separate frozen calibration and fifty per-field reviewed timestamps. It demonstrates wrong fresh score confirmations despite high candidate availability. See that report for commands, the distinction between geometric development calibration and validation, and the four established-reader confirmation failures. Its private assets also remain outside Git.
 
-The [score-core follow-up](../docs/score-core-recognition.md) changes candidate score extraction only, fixes the reviewed recapture zero-to-eight cases, and documents the loss of 31 complete original-clip readings. Its four new generated RGB tests cover all digits with red/white strokes, halo zeros, low-contrast loss/recovery and white crop rejection. All 21 optional tests run with the command at the top. The established reader's four wrong recapture confirmations remain unchanged; candidate results do not reach OBS.
+The [score-core follow-up](../docs/score-core-recognition.md) changes candidate score extraction only, fixes the reviewed recapture zero-to-eight cases, and documents the loss of 31 complete original-clip readings. Its four new generated RGB tests cover all digits with red/white strokes, halo zeros, low-contrast loss/recovery and white crop rejection. At that stage all 21 optional tests passed and the established reader's four wrong recapture confirmations were unchanged. The later [probe guard](../docs/probe-core-rejection.md) rejects those confirmations; candidate results still do not reach OBS.
+
+## Generated mixed-exposure sequences
+
+`exposure_stress.py` exercises the same candidate with independent synthetic RGB digits, without video, local calibration, camera, server or publishing. See the [method, matrix findings and limits](../docs/candidate-exposure-stress.md). Use the existing optional environment:
+
+```sh
+/tmp/livestream-recognition-venv/bin/python experiments/exposure_stress.py --pairs 15 --weights .25 --output data/candidate-exposure-one-five.json
+/tmp/livestream-recognition-venv/bin/python experiments/exposure_stress.py --all-pairs --color white --output data/candidate-exposure-white-matrix.json
+```
+
+Repeat the matrix for `--color orange` and `--color red`, choosing corresponding new output names. Without `--pairs` or `--all-pairs`, the default directed pairs are 01, 10, 08, 80, 09, 90, 18 and 81. Default new-source blend weights are .25, .5 and .75. Existing output paths are refused. Reports retain the source pairs, phase, clean expected digits, every candidate field state and digit diagnostic, calibration, package versions and generator/recognizer/state source hashes. They are numeric ignored data, not recordings or image assets.
+
+Only clean home phases have correctness labels; mixed images have no assigned physical score. Fresh confirmations on mixed images and outputs outside both source digits are reported separately. A zero wrong-clean count does not make mixed exposure safe, and a successful command exit reports completed measurement rather than successful recognition. The full white/orange/red matrices each expose twenty fresh confirmations outside both source digits. This is a controlled blend test, not calibrated camera exposure, clock-mixture, arbitrary-framing or live validation. Candidate output remains disabled.

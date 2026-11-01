@@ -135,7 +135,7 @@ An isolated experiment compares the existing probes, a rectified whole-digit rea
 
 The candidate uses [explicit clock layouts and independent confirmation](docs/candidate-confirmation.md). Scores can confirm while the clock is unreadable, and synthetic timed tenths sequences can confirm without generating ticks. The candidate now confirms tenths on part of the new real recording; [window/brightness fixes and evidence](docs/tenths-recognition.md) describe the remaining unknown and mixed-exposure cases.
 
-The [per-field exposure audit](docs/exposure-validation.md) includes unreadable source fields separately from readable correctness. Some ambiguous transition frames still receive fresh candidate confirmations; those remain unresolved validation risks.
+The [per-field exposure audit](docs/exposure-validation.md) includes unreadable source fields separately from readable correctness. Some ambiguous transition frames still receive fresh candidate confirmations; those remain unresolved validation risks. A [generated exposure stress runner](docs/candidate-exposure-stress.md) now reproduces persistent mixed-stroke confirmations, including third digits absent from both source scores, without private footage. It measures that failure; it does not resolve it or enable candidate output.
 
 A later [monitor recapture](docs/mock-capture-validation.md) exposes confirmed score errors in both readers, including visible zeros read as eights by the candidate. Neither reader is validated for that setup; fixing these demonstrated failures precedes further live-output testing.
 
