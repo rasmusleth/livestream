@@ -78,3 +78,5 @@ Use the [existing optional environment](../experiments/README.md) and new output
 ```
 
 Candidate output stays disabled. Orange blurred mixtures, unreviewed transitions, the drawing-specific score-window setup, physical-scoreboard exposure/refresh evidence, manual correction/output policy and coordinated live throughput/delay still block any claim of reliable match use. The next exposure work should target the preserved blurred orange failure without sacrificing these recovered clean scores or known rejection cases; later accuracy claims require fresh independently reviewed footage.
+
+The subsequent [bounded colour-contrast veto](score-chroma-rejection.md) rejects the selected orange one/five and one/six blur cases while retaining the reviewed recovered scores. Broader all-pairs blur checks expose additional failures in every colour, so that follow-up still leaves candidate output disabled.
