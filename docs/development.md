@@ -32,6 +32,8 @@ Five recording regression tests run when generated readings exist and are explic
 
 The offline comparison scripts in `experiments/` have optional packages and a separate experiment test suite. They are compiled by `scripts/check.py` but their dependency-requiring tests are not part of the application CI job. Dependency-free candidate confirmation tests under `tests/` do run in CI. Run optional tests with the isolated environment described in [experiments/README.md](../experiments/README.md); report those results separately. Private video/annotation comparisons are local experiments and do not run in CI.
 
+The offline comparison scripts in `experiments/` have optional packages and a separate seven-test suite. They are compiled by `scripts/check.py` but their dependency-requiring tests are not part of the application CI job. Run them with the isolated environment described in [experiments/README.md](../experiments/README.md); report those results separately. Private video/annotation comparisons are local experiments and do not run in CI.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on PRs to any branch (including stacked PRs), pushes to `main`, and manual dispatch. It does not use path filters, so documentation-only PRs also produce the required result.

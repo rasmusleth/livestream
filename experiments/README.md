@@ -17,7 +17,13 @@ Keep recordings, local profiles, labels, and outputs in ignored local paths. The
 Labels are visually inspected values for exact FFmpeg sample indices on a 10 Hz grid, with synthetic example structure:
 
 ```json
-[{"t": 2.5, "values": {"clock": "19:58", "home": 0, "away": 0}, "split": "heldout"}]
+[
+  {
+    "t": 2.5,
+    "values": { "clock": "19:58", "home": 0, "away": 0 },
+    "split": "heldout"
+  }
+]
 ```
 
 `split` documents development versus later timestamp checks; it does not imply independent footage. Unsupported or unreadable frames should be excluded with an explanation, rather than given guessed values. The final-minute format in this known scoreboard is normalized to `00:SS.t`; all blank slots elsewhere remain unavailable. Confirm any different scoreboard's formats before interpreting them.
