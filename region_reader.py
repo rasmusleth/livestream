@@ -19,7 +19,9 @@ class RegionReader:
     SCORE_LIGHT_FLOOR = 75
     SCORE_WHITE_LEVEL = 200
     SCORE_WHITE_FRACTION = .01
-    SCORE_CORE_FRACTION = .8
+    # Keep the tail-based view stricter than the primary 95th-percentile mask,
+    # without dropping moderately dimmer strokes beside bright vertical cores.
+    SCORE_CORE_FRACTION = .6
     SCORE_LOCAL_KERNEL = 21
     SCORE_LOCAL_FRACTION = .45
     SCORE_LOCAL_FLOOR = 20
