@@ -229,6 +229,8 @@ def main():
               'baseline_decode_and_read_seconds': baseline_seconds,
               'region_policy': {'vertical_padding_fraction': candidate.VERTICAL_PADDING,
                                 'horizontal_padding_fraction': candidate.HORIZONTAL_PADDING,
+                                'clock_left_padding_fraction':candidate.CLOCK_LEFT_PADDING,
+                                'shared_clock_brightness_floor':True,
                                 'edge_guard_px': candidate.EDGE_GUARD},
               'region_diagnostics': diagnostics,
               'independent_layout_plan':plan.entries,
