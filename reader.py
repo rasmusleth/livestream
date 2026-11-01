@@ -48,19 +48,29 @@ class FrameReader:
     def read(self, frame, t):
         if len(frame) != self.frame_size:
             raise ValueError('Truncated decoded frame')
-        values, confidence, evidence = {}, [], {}
+        values, confidence, evidence, white_evidence, rejections = {}, [], {}, {}, {}
         for name, segments in self.points.items():
-            levels = []
+            levels, white_levels = [], []
             for segment in segments:
-                on = 0
+                on, white = 0, 0
                 for x, y in segment:
                     i = (y * self.width + x) * 3
                     r, g, b = frame[i:i+3]
                     on += r > 220 and g > 60 and r > g * 1.03
+                    white += min(r, g, b) >= 200
                 levels.append(on / len(segment))
+                white_levels.append(white / len(segment))
             values[name], score = recognize(levels)
+            # The colour test excludes neutral white LED cores. Do not interpret
+            # a confidently bright probe as off, even if the remaining colour
+            # pattern happens to be a valid digit. This veto never fills in bits.
+            if any(level < .25 and core >= .25 + .055
+                   for level, core in zip(levels, white_levels)):
+                values[name], score = None, 0
+                rejections[name] = 'white_core_on_off_probe'
             confidence.append(score)
             evidence[name] = [round(v, 2) for v in levels]
+            white_evidence[name] = [round(v, 2) for v in white_levels]
         self.digits = values
         raw = None
         if all(v is not None for v in values.values()):
@@ -78,7 +88,8 @@ class FrameReader:
         return {'t': t, 'raw': raw, 'values': self.last['values'] if self.last else None,
                 'status': 'confirmed' if accepted else 'held' if self.last else 'unknown',
                 'age': round(t-self.last['at'], 3) if self.last else None,
-                'confidence': round(min(confidence), 3), 'segments': evidence}
+                'confidence': round(min(confidence), 3), 'segments': evidence,
+                'white_segments': white_evidence, 'rejections': rejections}
 
 
 def probe_recording(video, config):

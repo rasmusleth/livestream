@@ -4,7 +4,7 @@ The monitor recording exposes confirmed score errors in both readers. The region
 
 No recognition, thresholds, server, UI or OBS behavior was changed in this validation. No camera or existing user server was opened or stopped. All footage, local profiles, labels, contact sheets and numeric reports remain local and outside Git.
 
-The subsequent [candidate score-core fix](score-core-recognition.md) removes the reviewed candidate zero-to-eight confirmations and records its availability tradeoff. The measurements below preserve the pre-fix evidence. The established reader's failures remain unchanged.
+The subsequent [candidate score-core fix](score-core-recognition.md) removes the reviewed candidate zero-to-eight confirmations and records its availability tradeoff. The measurements below preserve the pre-fix evidence. The later [active probe safety guard](probe-core-rejection.md) prevents its four wrong confirmations by leaving output unknown; this is not successful recapture recognition. The measurements below preserve the original failures.
 
 ## Input and calibration
 

@@ -1,6 +1,8 @@
 # Candidate score LED cores: 2026-11-01
 
-The region candidate now reads the reviewed hollow zeros in the monitor recapture as zero, removing the demonstrated zero-to-eight confirmations. This changes the optional diagnostic candidate only. The established probe reader still has its four known wrong confirmations on that recording; it remains the sole source of OBS output. No candidate output is promoted, and this setup is not ready for reliable live use.
+The region candidate now reads the reviewed hollow zeros in the monitor recapture as zero, removing the demonstrated zero-to-eight confirmations. This changes the optional diagnostic candidate only. At this stage the established probe reader retained its four known wrong confirmations on that recording; it remained the sole source of OBS output. No candidate output is promoted, and this setup is not ready for reliable live use.
+
+The subsequent [active probe safety guard](probe-core-rejection.md) rejects contradictory white-core probes and prevents those four known confirmations by leaving recapture output unknown. It does not make that setup readable; the candidate results below remain unchanged.
 
 ## Focused extraction rule
 
