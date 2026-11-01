@@ -11,6 +11,10 @@ class RegionReader:
     VERTICAL_PADDING = .12
     HORIZONTAL_PADDING = .04
     EDGE_GUARD = 2
+    # The probe-era boxes were fitted around narrow 1s. Recover the left strokes
+    # of wider glyphs, but keep the third slot clear of the physical colon.
+    CLOCK_LEFT_PADDING = {'minutes_tens':.20, 'minutes_units':.12,
+                          'seconds_tens':.04, 'seconds_units':.12}
 
     def __init__(self, config, template):
         import cv2
@@ -23,17 +27,30 @@ class RegionReader:
     def masks(self, frame):
         cv, np = self.cv, self.np
         image = cv.warpPerspective(frame, self.warp, self.size)
-        result = []
+        patches = []
         for name in FIELDS:
             x, y, w, h = self.template['digits'][name]
-            # Keep horizontal padding smaller to avoid neighbouring digits and
-            # the colon, which sit much closer than the rows above and below.
             px, py = math.ceil(w*self.HORIZONTAL_PADDING), math.ceil(h*self.VERTICAL_PADDING)
+            left = math.ceil(w*self.CLOCK_LEFT_PADDING.get(name,self.HORIZONTAL_PADDING))
             patch = image[max(0, y-py):min(image.shape[0], y+h+py),
-                          max(0, x-px):min(image.shape[1], x+w+px)].astype(np.float32)
+                          max(0, x-left):min(image.shape[1], x+w+px)].astype(np.float32)
+            patches.append(patch)
+        # An independently thresholded blank window can promote brown panel
+        # texture into LED foreground. Use the other clock slots as a brightness
+        # reference too. This floor can only raise each local threshold; it never
+        # declares a slot blank just because its own contrast is low.
+        clock_patches = [patch for name,patch in zip(FIELDS,patches) if name in self.CLOCK_LEFT_PADDING]
+        clock_low = float(np.percentile(np.concatenate([patch[:,:,0].ravel() for patch in clock_patches]),50))
+        clock_high = max(float(np.percentile(patch[:,:,0],95)) for patch in clock_patches)
+        clock_floor = max(150,clock_low+.6*(clock_high-clock_low))
+        result = []
+        for name,patch in zip(FIELDS,patches):
             r, g, b = [patch[:, :, i] for i in range(3)]
             low, high = np.percentile(r, [50, 95])
-            mask = ((r >= g*.95) & (r-b > 35) & (r > max(150, float(low+.6*(high-low))))).astype(np.uint8)*255
+            threshold = max(150,float(low+.6*(high-low)))
+            if name in self.CLOCK_LEFT_PADDING:
+                threshold = max(threshold,clock_floor)
+            mask = ((r >= g*.95) & (r-b > 35) & (r > threshold)).astype(np.uint8)*255
             mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8))
             count, components, stats, _ = cv.connectedComponentsWithStats(mask)
             clean = np.zeros_like(mask)

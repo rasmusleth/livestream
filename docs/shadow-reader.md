@@ -55,3 +55,7 @@ Both full recordings were processed through the packed shadow path. All 1,638 or
 Browser checks used only new recorded/replay demo servers, later stopped. The monitor loaded both enabled and disabled states, displayed independent score freshness with an uncertain/stale clock, continued recognition during preview freeze, and held/aged values at EOF. On the newer recording, candidate scores were visible while the separate overlay stayed empty because the established reader had no confirmation. Replay loading, playback and seeking to 120 s retained `0–1`, `18:41`. The connection-loss view was checked after stopping the demo. No capture device was opened or existing user server stopped/restarted; footage, profiles, screenshots and numeric reports stayed local.
 
 Real-footage tenths recognition remains unavailable in the selected 42.5 s interval. The monitor exposes that limitation; it does not fill it with synthetic ticks. More independently reviewed footage, glyph-window work, exposure/flicker/rotation/zoom checks and coordinated camera/OBS latency validation remain necessary before considering candidate output.
+
+## Recorded glyph follow-up
+
+The subsequent [tenths window/brightness fix](tenths-recognition.md) improves the shared region implementation without changing this transport or the OBS boundary. Current results are 77 available and 51 freshly confirmed tenths clocks in the newer clip's 89-sample selected interval; the zero-coverage result above describes the integration baseline. Camera and exposure limits still apply.

@@ -93,3 +93,7 @@ python3 scripts/check.py
 ```
 
 Repeat both real-footage comparisons and stress cases using the commands in `experiments/README.md`, keeping new outputs local and preserving comparison evidence. UI changes also require opening the local monitor and checking readability, diagnostics, loading, playback/seeking where applicable, uncertain/held states, and the overlay boundary. CI lacks private footage and skips its recording regressions; optional experiment tests are not in application CI. Distinguish synthetic checks, sparse reviewed correctness, coverage, and actual live validation in the PR.
+
+## Later recorded-input progress
+
+After the opt-in monitor was merged, the [tenths recognition follow-up](tenths-recognition.md) fixes clipped clock windows and blank-window texture. It demonstrates real recorded tenths progression, with remaining unknown/mixed-exposure cases. Original output remains on the established reader, and hardware checks still require coordination.
