@@ -4,6 +4,8 @@ The diagnostic candidate now rejects a score when its normal mask and a stronger
 
 The later [local RGB contrast guard](local-score-contrast.md) rejects the balanced six/nine cases in the original matrix without changing recorded output. Controlled blur still produces third-digit confirmations. The counts below preserve the preceding two-mask stage.
 
+The later [score-core balance follow-up](score-core-balance.md) reduces the core contrast fraction to 0.6 to retain unevenly bright clean strokes. The formula and counts below describe this earlier 0.8 stage; the disagreement veto remains in use.
+
 ## Focused rule
 
 `RegionReader.observe(frame)` rectifies the source once and extracts the existing patches. It inspects the unchanged primary masks, then a second set of masks using the existing [score-light signal](score-core-recognition.md):
