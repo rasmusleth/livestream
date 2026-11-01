@@ -118,3 +118,5 @@ This blurred check still exposes eight fresh third-digit confirmations for orang
 ## Controlled source preparation
 
 See [controlled recording and recapture](../docs/controlled-recording.md) for the dependency-free source generator, timeline semantics and coordinated capture procedure. The optional suite includes a clean-source anchor check for all score digits, both explicit layouts and deliberately unavailable fields (36 optional tests at this stage). This is a direct generated-drawing check, not evidence of capture-chain accuracy.
+
+The first [controlled recapture evaluation](../docs/controlled-recapture-validation.md) uses separate local profile/template files and the existing comparison/audit commands. It preserves the initial label-contaminated score windows, a geometric window adjustment and a source-stroke-derived probe calibration. No recognition rules changed. Its 75 reviewed timestamps expose false score-core disagreements on visible threes/fours; other timestamps remain unreviewed.
