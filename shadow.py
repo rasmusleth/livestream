@@ -22,7 +22,7 @@ class ShadowReader:
             try:
                 width, height = self.size
                 frame = self.reader.np.frombuffer(payload, self.reader.np.uint8).reshape(height,width,3)
-                self.evidence = self.reader.inspect(self.reader.masks(frame))
+                self.evidence = self.reader.observe(frame)
                 self.state.update(self.evidence,t,layout=self.plan.at(t),
                                   frame_id=hashlib.sha256(payload).hexdigest())
                 self.last_t = t

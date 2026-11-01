@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from compare_readers import RegionReader, frames, confirmed_rows
+from compare_readers import RegionReader, frames, confirmed_rows, assemble
 from candidate_state import CandidateState, LayoutPlan, LAYOUTS
 
 OFFSETS = ((0,0),(-5,0),(5,0),(0,-5),(0,5),(-10,0),(10,0),(0,-10),(0,10))
@@ -48,11 +48,13 @@ def main():
         frame_id = hashlib.sha256(payload).hexdigest()
         for dx, dy in OFFSETS:
             shifted = cv2.warpAffine(frame, np.float32([[1,0,dx],[0,1,dy]]), (width,height))
-            masks = reader.masks(shifted)
-            methods = [('regions',reader.read)] + ([] if args.skip_ocr else [('ocr',reader.ocr)])
-            for name, method in methods:
-                value, digits = method(masks)
-                evidence = reader.inspect(masks) if name == 'regions' else None
+            evidence = reader.observe(shifted)
+            digits = [item['value'] for item in evidence.values()]
+            methods = [('regions', assemble(digits), digits, evidence)]
+            if not args.skip_ocr:
+                value, digits = reader.ocr(reader.masks(shifted))
+                methods.append(('ocr', value, digits, None))
+            for name, value, digits, evidence in methods:
                 for anchor in anchors:
                     # Only the anchor is labelled. Do not extend its truth to a
                     # surrounding sequence that may include clock/score changes.

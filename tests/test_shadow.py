@@ -40,13 +40,13 @@ class ShadowSafety(unittest.TestCase):
         names=('minutes_tens','minutes_units','seconds_tens','seconds_units','home','away')
         evidence={name:{'value':value} for name,value in zip(names,(1,7,5,1,0,1))}
         fake=SimpleNamespace(np=SimpleNamespace(uint8=None,frombuffer=lambda *a:SimpleNamespace(reshape=lambda *a:None)),
-                             masks=lambda frame:None,inspect=lambda masks:evidence)
+                             observe=lambda frame:evidence)
         with patch('region_reader.RegionReader',return_value=fake):
             reader=ShadowReader({'reference_size':[2,2]}, {}, LayoutPlan([{'start':0,'layout':'mmss'}]))
         reader.read(b'a',0)
         confirmed=reader.read(b'b',.1)
         self.assertEqual(confirmed['fields']['clock']['value'],'17:51')
-        fake.inspect=lambda masks: (_ for _ in ()).throw(ValueError('deliberate candidate failure'))
+        fake.observe=lambda frame: (_ for _ in ()).throw(ValueError('deliberate candidate failure'))
         failed=reader.read(b'c',.2)
         self.assertIn('deliberate',failed['error'])
         self.assertEqual(failed['fields']['clock']['status'],'held')

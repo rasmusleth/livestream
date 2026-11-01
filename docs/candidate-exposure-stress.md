@@ -2,6 +2,8 @@
 
 The diagnostic candidate can confirm a third score when a generated image blends two different source digits. The new offline `experiments/exposure_stress.py` makes this failure repeatable without private footage or camera access. It adds validation infrastructure and evidence; recognition, confirmation rules, the active reader and OBS output are unchanged. Candidate output stays disabled.
 
+The later [score-mask disagreement guard](score-mask-disagreement.md) reduces fresh third-digit confirmations from twenty to four per LED colour on this matrix, without losing clean raw readings. The baseline counts below preserve this initial experiment; balanced six/nine blends still fail.
+
 ## Why this test
 
 The [existing per-field reviews](exposure-validation.md) include candidate confirmations on visually ambiguous source fields. Their physical truth is unresolved. Local inspection of selected reviewed samples found that changing adaptive mask fractions between 0.4 and 0.8, or comparing per-segment brightness, did not consistently separate ambiguous source fields from readable ones. Those exploratory checks were not adopted as recognition rules. The review labels remain unchanged; no predicted clock or threshold agreement supplies ground truth.

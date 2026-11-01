@@ -10,6 +10,8 @@ import numpy as np
 from audit_readings import timeline
 from exposure_stress import ExposureScene, sequence, summarize
 from region_reader import RegionReader
+from candidate_state import LayoutPlan
+from shadow import ShadowReader
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -112,6 +114,53 @@ class ExposureStress(unittest.TestCase):
             self.assertEqual(set(report['code_sha256']),
                              {'experiments/exposure_stress.py', 'region_reader.py', 'candidate_state.py'})
             timeline({'fps': report['fps'], 'independent_rows': report['cases'][0]['rows']})
+
+    def test_competing_core_digit_rejects_mixed_one_five_and_one_six(self):
+        for color in ('white', 'orange', 'red'):
+            scene = ExposureScene(self.config, color)
+            for new, wrong in ((5, 9), (6, 8)):
+                for old, target, weight in ((1, new, .25), (1, new, .5),
+                                            (new, 1, .5), (new, 1, .75)):
+                    with self.subTest(color=color, old=old, new=target, weight=weight):
+                        evidence = self.reader.observe(scene.mixed(old, target, weight))['home']
+                        self.assertEqual(evidence['mask_value'], wrong)
+                        self.assertEqual(evidence['score_core']['value'], 1)
+                        self.assertIsNone(evidence['value'])
+                        self.assertEqual(evidence['reason'], 'score_mask_disagreement')
+
+    def test_shadow_disagreement_holds_age_without_replacing_with_core_digit(self):
+        scene = ExposureScene(self.config)
+        reader = ShadowReader(self.config, self.config, LayoutPlan([{'start': 0, 'layout': 'mmss'}]))
+        frames = [scene.endpoint(1)]*3 + [scene.mixed(1, 5, .25)]*3 + [scene.endpoint(5)]*3
+        for index, source in enumerate(frames):
+            frame = source.copy()
+            frame[0, 0] = (index, 0, 0)
+            row = reader.read(frame.tobytes(), index/10)
+            self.assertIsNone(row['error'])
+            if 3 <= index <= 6:
+                home = row['fields']['home']
+                self.assertEqual((home['value'], home['status']), (1, 'held'))
+                self.assertAlmostEqual(home['age'], (index-2)/10)
+                if index <= 5:
+                    self.assertIsNone(home['observed'])
+                    self.assertEqual(home['reason'], 'score_mask_disagreement')
+                self.assertEqual(row['fields']['clock']['status'], 'confirmed')
+                self.assertEqual(row['fields']['away']['status'], 'confirmed')
+        self.assertEqual((row['fields']['home']['value'], row['fields']['home']['status']), (5, 'confirmed'))
+        self.assertEqual(row['fields']['home']['age'], 0)
+
+    def test_full_observation_retains_all_ten_clean_digits_and_clock_evidence(self):
+        for color in ('white', 'orange', 'red'):
+            scene = ExposureScene(self.config, color)
+            for digit in range(10):
+                with self.subTest(color=color, digit=digit):
+                    frame = scene.endpoint(digit)
+                    primary = self.reader.inspect(self.reader.masks(frame))
+                    observed = self.reader.observe(frame)
+                    self.assertEqual(observed['home']['value'], digit)
+                    self.assertEqual(observed['home']['score_core']['value'], digit)
+                    for name in ('minutes_tens', 'minutes_units', 'seconds_tens', 'seconds_units'):
+                        self.assertEqual(observed[name], primary[name])
 
 
 if __name__ == '__main__':

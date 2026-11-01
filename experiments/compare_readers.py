@@ -204,17 +204,16 @@ def main():
         if args.limit and index >= args.limit:
             break
         frame = np.frombuffer(payload, np.uint8).reshape(config['reference_size'][1], config['reference_size'][0], 3)
-        before = time.perf_counter(); masks = candidate.masks(frame); shared = time.perf_counter()-before
-        before = time.perf_counter(); evidence = candidate.inspect(masks)
+        before = time.perf_counter(); evidence = candidate.observe(frame)
         value = assemble([item['value'] for item in evidence.values()])
         diagnostics.append(evidence)
         t = round(index/fps, 3)
         independent_rows.append(independent.update(evidence, t, layout=plan.at(t),
                                                     frame_id=hashlib.sha256(payload).hexdigest()))
-        timings['regions'].append(shared+time.perf_counter()-before); raw['regions'].append(value)
+        timings['regions'].append(time.perf_counter()-before); raw['regions'].append(value)
         if not args.skip_ocr:
-            before = time.perf_counter(); value, _ = candidate.ocr(masks, args.ocr_psm)
-            timings['ocr'].append(shared+time.perf_counter()-before); raw['ocr'].append(value)
+            before = time.perf_counter(); value, _ = candidate.ocr(candidate.masks(frame), args.ocr_psm)
+            timings['ocr'].append(time.perf_counter()-before); raw['ocr'].append(value)
         if index % 200 == 0:
             print(f'{index/fps:.1f}s processed', flush=True)
     rows = {'current': baseline}
@@ -238,6 +237,9 @@ def main():
                                 'score_min_contrast':candidate.SCORE_MIN_CONTRAST,
                                 'score_white_level':candidate.SCORE_WHITE_LEVEL,
                                 'score_white_fraction':candidate.SCORE_WHITE_FRACTION,
+                                'score_core_disagreement_veto':True,
+                                'score_core_fraction':candidate.SCORE_CORE_FRACTION,
+                                'score_core_percentile':99,
                                 'edge_guard_px': candidate.EDGE_GUARD},
               'region_diagnostics': diagnostics,
               'independent_layout_plan':plan.entries,
