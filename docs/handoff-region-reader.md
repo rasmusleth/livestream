@@ -2,6 +2,8 @@
 
 Prepared 2026-10-31. The user agreed to pursue whole-region recognition, beginning with an opt-in shadow mode. This document records the next task; it does not mean that task is implemented. Read `AGENTS.md`, `README.md`, `docs/architecture.md`, `VALIDATION.md`, and `docs/development.md` before changing code.
 
+Follow-up: the first offline glyph-safety stage is now implemented on `codex/region-glyph-safety`; see [evidence and coverage costs](recognition-comparison.md#glyph-safety-follow-up). The known shifted-score window is fixed, with conservative rejection elsewhere. The remaining stages below—explicit safe clock formats, independent field/tenths confirmation, and monitor shadow integration—are still pending. The preparation-time checkout/PR details below describe the starting point.
+
 ## Goal and current position
 
 Make the reader tolerate ordinary setup differences without positioning 42 tiny probes perfectly. Keep processing local and use the reader as the sole owner of the scoreboard capture device. OBS receives digital output through its browser overlay.
@@ -40,16 +42,16 @@ Acceptance evidence should include the known shifted-score case becoming correct
 
 All paths below are relative to the repository and are ignored. Do not upload or commit their contents.
 
-| Path | Purpose |
-| --- | --- |
-| `scoreboard-2-min-clip.mp4` | Original 1920×1080 recording, about 164 seconds; use tracked `calibration.json`. |
-| `scoreboard-live-test-01.mkv` | New 1920×1080 recording, about 51 seconds. Read directly; no conversion needed. |
-| `data/calibration.local.json` | User's editable saved camera profile. Do not overwrite it for experiments. |
-| `data/recognition-live-calibration.json` | Snapshot matching the new MKV; use this for reproducible comparison. |
-| `data/recognition-{original,live}-labels.json` | Visually inspected exact 10 Hz sample labels, with development/heldout splits. |
-| `data/recognition-{original,live}-final.json` | Comparison timelines, metrics, configuration, labels, versions, and hashes. |
-| `data/recognition-{original,live}-stress.json` | Translation stress results. |
-| `data/readings.json` | Regenerated original-reader results used by recording regression tests. |
+| Path                                           | Purpose                                                                          |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `scoreboard-2-min-clip.mp4`                    | Original 1920×1080 recording, about 164 seconds; use tracked `calibration.json`. |
+| `scoreboard-live-test-01.mkv`                  | New 1920×1080 recording, about 51 seconds. Read directly; no conversion needed.  |
+| `data/calibration.local.json`                  | User's editable saved camera profile. Do not overwrite it for experiments.       |
+| `data/recognition-live-calibration.json`       | Snapshot matching the new MKV; use this for reproducible comparison.             |
+| `data/recognition-{original,live}-labels.json` | Visually inspected exact 10 Hz sample labels, with development/heldout splits.   |
+| `data/recognition-{original,live}-final.json`  | Comparison timelines, metrics, configuration, labels, versions, and hashes.      |
+| `data/recognition-{original,live}-stress.json` | Translation stress results.                                                      |
+| `data/readings.json`                           | Regenerated original-reader results used by recording regression tests.          |
 
 The optional Python 3.12 environment was created at `/tmp/livestream-recognition-venv`; it may disappear. Recreate it with `experiments/requirements.txt` if needed. Local Tesseract 5.5.1 was available, but is unnecessary for the Regions-only implementation. Labels must refer to actual FFmpeg sampled frames: at 45.0 and 50.0 seconds the sampled new-clip images show 46.6 and 41.8 seconds respectively. Independently seeking the video can yield different tenths.
 

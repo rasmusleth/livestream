@@ -74,6 +74,13 @@ def frames(video, size, fps, limit=None):
 
 
 class RegionReader:
+    # The probe-era boxes can cut through the top LED stroke even at nominal
+    # alignment. Leave a guard around them, then reject foreground at that guard.
+    # These are candidate heuristics for this panel, not learned accuracy bounds.
+    VERTICAL_PADDING = .12
+    HORIZONTAL_PADDING = .04
+    EDGE_GUARD = 2
+
     def __init__(self, config, template):
         import cv2
         import numpy as np
@@ -88,7 +95,11 @@ class RegionReader:
         result = []
         for name in FIELDS:
             x, y, w, h = self.template['digits'][name]
-            patch = image[y:y+h, x:x+w].astype(np.float32)
+            # Keep horizontal padding smaller to avoid neighbouring digits and
+            # the colon, which sit much closer than the rows above and below.
+            px, py = math.ceil(w*self.HORIZONTAL_PADDING), math.ceil(h*self.VERTICAL_PADDING)
+            patch = image[max(0, y-py):min(image.shape[0], y+h+py),
+                          max(0, x-px):min(image.shape[1], x+w+px)].astype(np.float32)
             r, g, b = [patch[:, :, i] for i in range(3)]
             low, high = np.percentile(r, [50, 95])
             mask = ((r >= g*.95) & (r-b > 35) & (r > max(150, float(low+.6*(high-low))))).astype(np.uint8)*255
@@ -101,18 +112,35 @@ class RegionReader:
             result.append(clean)
         return result
 
-    def digit(self, mask):
+    def inspect_digit(self, mask):
+        """Return the observed digit and rejection evidence before normalization."""
         cv, np = self.cv, self.np
+        result = {'value': None, 'reason': None, 'levels': [], 'bounds': None}
         ys, xs = np.where(mask != 0)
+        if not len(xs):
+            return {**result, 'value': 'blank', 'reason': 'no_foreground'}
         if len(xs) < mask.size*.008:
-            return 'blank', []
+            return {**result, 'reason': 'insufficient_foreground'}
         if len(xs) > mask.size*.75:
-            return None, []
+            return {**result, 'reason': 'excess_foreground'}
         x, y, w, h = cv.boundingRect(mask)
+        result['bounds'] = [x, y, w, h]
+        # Resizing a clipped shape can turn it into another valid digit. Require
+        # two clear pixels on every edge of the enlarged observation window.
+        if min(x, y, mask.shape[1]-x-w, mask.shape[0]-y-h) < self.EDGE_GUARD:
+            return {**result, 'reason': 'edge_foreground'}
         if h < mask.shape[0]*.45:
-            return None, []
+            return {**result, 'reason': 'short_foreground'}
         if w/h < .5:
-            return 1, []
+            widths = np.count_nonzero(mask[y:y+h, x:x+w], axis=1)
+            active = widths[widths > 0]
+            # A narrow bounding box alone cannot distinguish 1 from a narrow 7
+            # or a partial 9. A horizontal cap must not be ignored as a 1.
+            if np.percentile(active, 90) > 2.2*np.median(active):
+                return {**result, 'reason': 'ambiguous_narrow_glyph'}
+            return {**result, 'value': 1}
+        if w/h < .55:
+            return {**result, 'reason': 'ambiguous_aspect'}
         normalized = cv.resize(mask[y:y+h, x:x+w], (64, 96), interpolation=cv.INTER_AREA)/255
         # Broad stroke areas, normalized to the observed foreground extent.
         areas = [(18, 0, 46, 16), (44, 18, 64, 40), (40, 56, 60, 78),
@@ -120,13 +148,21 @@ class RegionReader:
         levels = [float(normalized[y1:y2, x1:x2].mean()) for x1, y1, x2, y2 in areas]
         peak = max(levels)
         if peak < .1:
-            return None, levels
+            return {**result, 'reason': 'weak_segments', 'levels': levels}
         relative = [v/peak for v in levels]
         bits = ''.join('1' if v >= .4 else '0' for v in relative)
         digit = next((n for n, pattern in PATTERNS.items() if pattern == bits), None)
         if min(abs(v-.4) for v in relative) < .04:
             digit = None
-        return digit, [round(v, 3) for v in levels]
+        return {**result, 'value': digit, 'reason': None if digit is not None else 'ambiguous_segments',
+                'levels': [round(v, 3) for v in levels]}
+
+    def digit(self, mask):
+        evidence = self.inspect_digit(mask)
+        return evidence['value'], evidence['levels']
+
+    def inspect(self, masks):
+        return {name: self.inspect_digit(mask) for name, mask in zip(FIELDS, masks)}
 
     def read(self, masks):
         evidence = [self.digit(mask) for mask in masks]
@@ -221,13 +257,16 @@ def main():
         labels = [item for item in labels if item['t'] < args.limit/fps]
     candidate = RegionReader(config, template)
     raw = {'regions': [], 'ocr': []}
+    diagnostics = []
     timings = {'regions': [], 'ocr': []}
     for index, payload in enumerate(frames(args.video, config['reference_size'], fps, args.limit)):
         if args.limit and index >= args.limit:
             break
         frame = np.frombuffer(payload, np.uint8).reshape(config['reference_size'][1], config['reference_size'][0], 3)
         before = time.perf_counter(); masks = candidate.masks(frame); shared = time.perf_counter()-before
-        before = time.perf_counter(); value, _ = candidate.read(masks)
+        before = time.perf_counter(); evidence = candidate.inspect(masks)
+        value = assemble([item['value'] for item in evidence.values()])
+        diagnostics.append(evidence)
         timings['regions'].append(shared+time.perf_counter()-before); raw['regions'].append(value)
         if not args.skip_ocr:
             before = time.perf_counter(); value, _ = candidate.ocr(masks, args.ocr_psm)
@@ -244,6 +283,10 @@ def main():
               'calibration': config, 'template': template, 'labels': labels, 'ocr_psm': args.ocr_psm, 'fps': fps, 'versions': {'opencv': cv2.__version__, 'numpy': np.__version__,
               'tesseract': None if args.skip_ocr else subprocess.run(['tesseract', '--version'], capture_output=True, text=True, check=True).stdout.splitlines()[0]},
               'baseline_decode_and_read_seconds': baseline_seconds,
+              'region_policy': {'vertical_padding_fraction': candidate.VERTICAL_PADDING,
+                                'horizontal_padding_fraction': candidate.HORIZONTAL_PADDING,
+                                'edge_guard_px': candidate.EDGE_GUARD},
+              'region_diagnostics': diagnostics,
               'metrics': {name: evaluate(values, labels, fps) for name, values in rows.items()}, 'rows': rows}
     for name, durations in timings.items():
         if durations:
