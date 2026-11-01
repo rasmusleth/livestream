@@ -25,14 +25,14 @@ All pipelines use the same all-fields, two-consecutive-matching-observations con
 
 Coverage means the method emitted a complete valid-looking raw observation. It does not mean it was correct. “Fresh” counts observations accepted by the confirmation rule, excluding held values.
 
-| Recording | Method | Raw coverage | Fresh confirmation |
-| --- | --- | --- | --- |
-| Original | Current | 1,586/1,638 (96.8%) | 1,456/1,638 (88.9%) |
-| Original | Regions | 1,614/1,638 (98.5%) | 1,504/1,638 (91.8%) |
-| Original | OCR | 300/1,638 (18.3%) | 91/1,638 (5.6%) |
-| New | Current | 1/514 (0.2%) | 0/514 (0.0%) |
-| New | Regions | 372/514 (72.4%) | 277/514 (53.9%) |
-| New | OCR | 116/514 (22.6%) | 12/514 (2.3%) |
+| Recording | Method  | Raw coverage        | Fresh confirmation  |
+| --------- | ------- | ------------------- | ------------------- |
+| Original  | Current | 1,586/1,638 (96.8%) | 1,456/1,638 (88.9%) |
+| Original  | Regions | 1,614/1,638 (98.5%) | 1,504/1,638 (91.8%) |
+| Original  | OCR     | 300/1,638 (18.3%)   | 91/1,638 (5.6%)     |
+| New       | Current | 1/514 (0.2%)        | 0/514 (0.0%)        |
+| New       | Regions | 372/514 (72.4%)     | 277/514 (53.9%)     |
+| New       | OCR     | 116/514 (22.6%)     | 12/514 (2.3%)       |
 
 To separate format support from other gains, the first 25 s of the new recording retain four-digit `MM:SS`. There, Current emits 1/250 complete raw readings (0.4%), Regions 235/250 (94.0%), and OCR 73/250 (29.2%). The improvement is therefore not solely from accepting blank-leading or fractional clock formats.
 
@@ -44,14 +44,14 @@ The assistant inspected source images for 11 original and 15 new timestamp sampl
 
 Labels refer to the **exact FFmpeg 10 Hz output samples**, not separately sought frames. This matters for fractional seconds: the sampled frame at 45.0 s reads 46.6 seconds and at 50.0 s reads 41.8, while independently sought frames showed different tenths. Corrections were made by inspecting those sampled images, not by copying model predictions.
 
-| Recording | Method | Reviewed raw correct / wrong / unknown | Wrong fresh confirmations at reviewed timestamps |
-| --- | --- | --- | --- |
-| Original (11) | Current | 11 / 0 / 0 | 0 |
-| Original (11) | Regions | 11 / 0 / 0 | 0 |
-| Original (11) | OCR | 0 / 2 / 9 | 1 |
-| New (15) | Current | 0 / 0 / 15 | 0 |
-| New (15) | Regions | 11 / 0 / 4 | 0 |
-| New (15) | OCR | 1 / 2 / 12 | 0 |
+| Recording     | Method  | Reviewed raw correct / wrong / unknown | Wrong fresh confirmations at reviewed timestamps |
+| ------------- | ------- | -------------------------------------- | ------------------------------------------------ |
+| Original (11) | Current | 11 / 0 / 0                             | 0                                                |
+| Original (11) | Regions | 11 / 0 / 0                             | 0                                                |
+| Original (11) | OCR     | 0 / 2 / 9                              | 1                                                |
+| New (15)      | Current | 0 / 0 / 15                             | 0                                                |
+| New (15)      | Regions | 11 / 0 / 4                             | 0                                                |
+| New (15)      | OCR     | 1 / 2 / 12                             | 0                                                |
 
 On the eight additional timestamps, Regions produces seven correct raw readings and one unknown; Current produces four correct and four unknown; OCR produces one wrong and seven unknown. Stale held clocks often differ from current truth; they are counted separately from wrong fresh confirmations. Zero wrong Regions confirmations in these sparse spot checks does not establish zero errors elsewhere.
 
@@ -65,11 +65,11 @@ Production integration needs a separately tested rule that confirms successive o
 
 Each of the eight additional frames was translated with calibration left unchanged. The two candidates saw the same shifted pixels. These are single-frame raw checks, not confirmation tests, and only translations were tested; no zoom, rotation, or moving-camera accuracy is claimed.
 
-| Source-image shift | Cases per method | Regions correct / wrong / unknown | OCR correct / wrong / unknown |
-| --- | --- | --- | --- |
-| None | 8 | 7 / 0 / 1 | 0 / 1 / 7 |
-| ±5 px horizontally or vertically | 32 | 28 / 0 / 4 | 0 / 5 / 27 |
-| ±10 px horizontally or vertically | 32 | 27 / 1 / 4 | 1 / 5 / 26 |
+| Source-image shift                | Cases per method | Regions correct / wrong / unknown | OCR correct / wrong / unknown |
+| --------------------------------- | ---------------- | --------------------------------- | ----------------------------- |
+| None                              | 8                | 7 / 0 / 1                         | 0 / 1 / 7                     |
+| ±5 px horizontally or vertically  | 32               | 28 / 0 / 4                        | 0 / 5 / 27                    |
+| ±10 px horizontally or vertically | 32               | 27 / 1 / 4                        | 1 / 5 / 26                    |
 
 The Regions error is the new recording at 32.5 s shifted upward 10 px: the away score `1` becomes `9`. This exposes an unsafe shape/crop boundary case. Two identical wrong observations could still satisfy the existing confirmation rule. Do not activate this prototype solely because its raw coverage is higher.
 
@@ -100,20 +100,20 @@ Local reports include per-digit value, reason, foreground bounds and segment lev
 
 Both recordings were rerun with Regions only, preserving the original reports in separate ignored files. OCR was not rerun; its shared foreground preprocessing has changed, so the historical OCR numbers above are not results for the updated masks.
 
-| Recording | Complete raw before → after | Fresh confirmations after | Reviewed raw correct / wrong / unknown after |
-| --- | --- | --- | --- |
-| Original | 1,614 → 1,559 / 1,638 (95.2%) | 1,446 / 1,638 | 10 / 0 / 1 |
-| New | 372 → 224 / 514 (43.6%) | 168 / 514 | 6 / 0 / 9 |
+| Recording | Complete raw before → after   | Fresh confirmations after | Reviewed raw correct / wrong / unknown after |
+| --------- | ----------------------------- | ------------------------- | -------------------------------------------- |
+| Original  | 1,614 → 1,559 / 1,638 (95.2%) | 1,446 / 1,638             | 10 / 0 / 1                                   |
+| New       | 372 → 224 / 514 (43.6%)       | 168 / 514                 | 6 / 0 / 9                                    |
 
 There were zero wrong fresh confirmations at the existing reviewed timestamps. The longest interval without fresh confirmation increased to 1.1 s on the original and 17.3 s on the new recording. These coverage losses are material: this version favors rejection and remains unsuitable for enabling output. The original runtime reader still yields 1,638 observations with 52 uncertain raw readings.
 
 Across the eight reused stress anchors, complete raw results were:
 
-| Source-image shift | Cases | Correct / wrong / unknown |
-| --- | --- | --- |
-| None | 8 | 6 / 0 / 2 |
-| ±5 px horizontally or vertically | 32 | 18 / 0 / 14 |
-| ±10 px horizontally or vertically | 32 | 12 / 0 / 20 |
+| Source-image shift                | Cases | Correct / wrong / unknown |
+| --------------------------------- | ----- | ------------------------- |
+| None                              | 8     | 6 / 0 / 2                 |
+| ±5 px horizontally or vertically  | 32    | 18 / 0 / 14               |
+| ±10 px horizontally or vertically | 32    | 12 / 0 / 20               |
 
 The known new-clip 32.5 s / 10-pixel upward shift now returns `07:57`, home `0`, away `1`, matching its existing label. The away glyph reads `1` in all 11 samples from 32.0 through 33.0 s under that shift. A local montage of the exact sampled unshifted frames was inspected: away remains `1` throughout, while the clock changes between 32.2 and 32.3 s. The shifted complete observation is unknown in four samples and available in seven; the existing confirmation rule first accepts the complete `07:57`, `0–1` at 32.4 s. This fixes the reported persistent-score hazard in that window, not arbitrary cropped digits or other sequences.
 

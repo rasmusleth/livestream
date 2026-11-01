@@ -64,7 +64,6 @@ All 32 local tests pass, including generated-video equivalence with preview enab
 
 No capture device was opened for this preview milestone. Preview performance and alignment against the actual live camera, capture-rate selection, single-owner OBS integration, and end-to-end delay still need hardware validation. The preview is limited to two updates per second and is not synchronized with every recognized frame. There is no calibration editor or frame export.
 
-
 ## Camera calibration editor: 2026-10-31
 
 The user reports that the live camera preview works through the capture device, but no complete scoreboard reading has been confirmed with the reference calibration. This establishes preview delivery for that setup, not recognition accuracy. Fixed probe geometry is a likely cause; exposure, LED flicker, and other conditions have not been ruled out.
@@ -73,7 +72,6 @@ The local editor adds per-digit four-corner placement, interpolated segment prob
 
 Browser checks with recorded input covered editor initialization, four-corner placement, numeric probe adjustment, discard, single-frame per-digit diagnostics, local save feedback, and unchanged running output during edits. A server started with the browser-saved profile received and confirmed recorded observations. No new hardware capture was opened. Actual live calibration and recognition remain to be tested by the operator. Standard probe interpolation and preview-frame checks are alignment aids; they are not an accuracy claim or automatic camera tracking.
 
-
 ## Whole-panel alignment: 2026-10-31
 
 The calibration editor now maps the known central clock-and-scores layout from four panel corners. The reference anchors were selected by inspecting the supplied recording; numbered side panels are excluded. Probe centers and enclosing digit regions are projected by a homography. This does not detect new layouts, rectify the input image, change recognition thresholds, scale the sampling window, or track camera movement.
@@ -81,7 +79,6 @@ The calibration editor now maps the known central clock-and-scores layout from f
 All 39 local tests pass, including identity preservation, comparison with an independent perspective warp, shifted/scaled/sheared synthetic recognition via the whole-panel path, invalid and legacy outlines, outline persistence, and unchanged active output. The reference recording still produces 1,638 observations with 52 uncertain raw readings. Reference probe coordinates and recognition thresholds were not changed.
 
 Browser checks used recorded input only. Four panel clicks positioned all six digit regions and probes. A subsequent diagnostic check produced the complete raw reading 18:41 and 0–1, matching the running recording output; another frame was explicitly incomplete. This is a diagnostic example, not an accuracy measurement. A layout shift between corner prompts was found and fixed so the image remains stable during marking. Real camera alignment and recognition remain unvalidated. No capture device was opened and no footage was uploaded.
-
 
 ## Offline reader comparison
 
