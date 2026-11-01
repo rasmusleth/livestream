@@ -67,7 +67,7 @@ Readings are precomputed from the recording at 10 samples per second and saved i
 
 `calibration.json` specifies the six digit regions and seven sample locations per digit, in source-image coordinates. The reader measures the bright LED strokes and decodes their segment patterns. Two consecutive matching samples are required before publishing a reading; otherwise the last confirmed values are held and labelled. A hold of one second or longer is marked stale.
 
-This first version supports this fixed 1920×1080 camera framing and one-digit scores. A changed angle, zoom, scoreboard layout, lighting, or multi-digit score needs further work and validation. A transparent OBS browser overlay can follow the verification player. Experimental macOS live capture is available; live scoreboard framing and recognition still need validation. Manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
+The reference calibration supports the supplied 1920×1080 framing and one-digit scores. The local editor below can adapt digit positions to a different framing; each new setup still needs validation. Changes in scoreboard layout, lighting, or multi-digit scores need further work. A transparent OBS browser overlay can follow the verification player. Experimental macOS live capture is available; live scoreboard framing and recognition still need validation. Manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
 
 ### Validation
 
@@ -107,4 +107,25 @@ python3 server.py --mode recording
 python3 server.py --mode camera --device 'usb video'
 ```
 
-Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. The monitor shows a preview with read-only digit regions and segment probes for checking camera alignment. Its freeze button holds the image while recognition and the overlay continue. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.
+Open the monitor at `http://127.0.0.1:8765` and use `http://127.0.0.1:8765/overlay` in OBS. The monitor shows a preview with digit regions and segment probes, plus a local calibration editor for adapting them to the camera framing. Its freeze button holds the image while recognition and the overlay continue. Continuous input runs in the server and continues when the monitor tab is closed. The default `--mode replay` preserves the original batch-backed verification player. See [live-input setup and validation limits](docs/live-input.md) before using the camera mode.
+
+
+### Adapt calibration to a new camera position
+
+Open **Calibrate this camera setup** in the continuous monitor and choose **Align whole scoreboard · 4 corners**. The preview freezes. Mark the outer corners of the **central panel containing the clock and both scores**, excluding the numbered side panels, in this order: top left, top right, bottom right, bottom left. The on-screen schematic identifies the panel. For rounded corners, click where the straight edges would meet.
+
+Those four clicks apply a perspective transform to all six digit regions and all 42 probes using this scoreboard's known layout. Repeating alignment replaces the draft from the active profile, so transformations do not accumulate. This maps known positions; it does not detect letters, find digits independently, or track motion.
+
+Use **Fine adjustments (optional)** only where needed: mark a single digit's corners or place an individual probe onto the center of its LED stroke, including an unlit stroke. Preview zoom and source-pixel coordinate inputs help with fine placement. If available, an all-segments-lit scoreboard test display makes alignment easier.
+
+The tracked reference profile includes the central panel outline. Newly saved profiles retain their mapped outline for the next setup. Older local profiles without `board_corners` still support per-digit editing; to use whole-panel alignment, restart with `--calibration calibration.json` and align from that reference.
+
+**Check against latest frame** reports each digit and its segment levels without changing the overlay. It uses the latest server preview, even if the browser image is frozen; it is a diagnostic observation, not a confirmed reading. Preview resampling can differ from the final crop/scale path. Verify recognized values against the physical scoreboard after activating the profile.
+
+**Save local profile** writes `data/calibration.local.json` (excluded from Git), replacing the previously saved local profile. It does not change the running reader or the tracked reference calibration. Stop the server with Ctrl+C, then restart using the saved profile:
+
+```sh
+python3 server.py --mode camera --device 'usb video' --port 8771 --calibration data/calibration.local.json
+```
+
+Keep OBS from capturing the same device. Check several visible clock and score values after restarting; fresh repeated observations are required before output is confirmed. Repeat calibration after moving the camera. This setup step does not automatically locate or track the scoreboard, compensate for LED flicker/exposure, or establish live recognition accuracy.

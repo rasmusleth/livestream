@@ -43,6 +43,7 @@ class FrameReader:
                 if not segment or any(x < 0 or x >= self.width or y < 0 or y >= self.height for x, y in segment):
                     raise ValueError('Segment sample lies outside crop.')
         self.last, self.candidate, self.count = None, None, 0
+        self.digits = None
 
     def read(self, frame, t):
         if len(frame) != self.frame_size:
@@ -60,6 +61,7 @@ class FrameReader:
             values[name], score = recognize(levels)
             confidence.append(score)
             evidence[name] = [round(v, 2) for v in levels]
+        self.digits = values
         raw = None
         if all(v is not None for v in values.values()):
             minutes = values['minutes_tens'] * 10 + values['minutes_units']

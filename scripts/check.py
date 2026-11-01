@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 FIELDS = {'minutes_tens', 'minutes_units', 'seconds_tens', 'seconds_units', 'home', 'away'}
 
 
@@ -27,6 +28,8 @@ def validate_calibration():
         assert len(centers) == 7, f'{name}: expected seven segment centers'
         for px, py in centers:
             assert x + 5 <= px < x + w - 5 and y + 5 <= py < y + h - 5, name
+    from calibration import validate_corners
+    validate_corners(config['board_corners'], config['reference_size'])
     print('Calibration structure and bounds: OK', flush=True)
 
 

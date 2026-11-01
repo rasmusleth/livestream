@@ -1,4 +1,6 @@
 *.mp4
+*.mkv
 __pycache__/
 data/*.json
 .DS_Store
+data/*.json.tmp
