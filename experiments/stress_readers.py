@@ -1,9 +1,11 @@
 """Compare candidates on labelled held-out frames with deliberate calibration error."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
 from compare_readers import RegionReader, frames, confirmed_rows
+from candidate_state import CandidateState, LayoutPlan, LAYOUTS
 
 OFFSETS = ((0,0),(-5,0),(5,0),(0,-5),(0,5),(-10,0),(10,0),(0,-10),(0,10))
 
@@ -18,18 +20,24 @@ def main():
     parser.add_argument('--labels', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--skip-ocr', action='store_true')
+    layout_args = parser.add_mutually_exclusive_group()
+    layout_args.add_argument('--clock-layout', choices=LAYOUTS, default='mmss')
+    layout_args.add_argument('--clock-layout-plan', type=Path)
     parser.add_argument('--sequence-radius', type=int, default=5,
                         help='Samples before/after each reviewed anchor (default: 5)')
     args = parser.parse_args()
     if args.sequence_radius < 0:
         parser.error('--sequence-radius must be nonnegative')
     config = json.loads(args.calibration.read_text())
+    plan = LayoutPlan(json.loads(args.clock_layout_plan.read_text()) if args.clock_layout_plan else
+                      [{'start':0, 'layout':args.clock_layout}])
     labels = {round(label['t']*config['sample_fps']): label for label in json.loads(args.labels.read_text()) if label.get('split') == 'heldout'}
     if not labels:
         parser.error('At least one heldout label is required')
     reader = RegionReader(config, json.loads(args.template.read_text()))
     sequences = {(anchor, offset, method): [] for anchor in labels for offset in OFFSETS
                  for method in (('regions',) if args.skip_ocr else ('regions','ocr'))}
+    states = {(anchor, offset): CandidateState() for anchor in labels for offset in OFFSETS}
     width, height = config['reference_size']
     radius = args.sequence_radius
     for index, payload in enumerate(frames(args.video, (width, height), config['sample_fps'], max(labels)+radius+1)):
@@ -37,20 +45,24 @@ def main():
         if not anchors:
             continue
         frame = np.frombuffer(payload, np.uint8).reshape(height, width, 3)
+        frame_id = hashlib.sha256(payload).hexdigest()
         for dx, dy in OFFSETS:
             shifted = cv2.warpAffine(frame, np.float32([[1,0,dx],[0,1,dy]]), (width,height))
             masks = reader.masks(shifted)
             methods = [('regions',reader.read)] + ([] if args.skip_ocr else [('ocr',reader.ocr)])
             for name, method in methods:
                 value, digits = method(masks)
+                evidence = reader.inspect(masks) if name == 'regions' else None
                 for anchor in anchors:
                     # Only the anchor is labelled. Do not extend its truth to a
                     # surrounding sequence that may include clock/score changes.
                     expected = labels[anchor]['values'] if index == anchor else None
+                    t = round(index/config['sample_fps'],3)
+                    independent = states[anchor,(dx,dy)].update(evidence,t,layout=plan.at(t),frame_id=frame_id) if evidence else None
                     sequences[anchor,(dx,dy),name].append({
                         't':round(index/config['sample_fps'],3), 'anchor_t':labels[anchor]['t'],
                         'offset':[dx,dy], 'method':name, 'raw':value, 'digits':digits,
-                        'evidence':reader.inspect(masks) if name == 'regions' else None,
+                        'evidence':evidence, 'independent':independent, 'clock_layout':plan.at(t),
                         'expected':expected,
                         'correct':None if value is None or expected is None else value == expected})
     results = []
@@ -59,49 +71,6 @@ def main():
         for row, state in zip(sequence, confirmed):
             row.update({key:state[key] for key in ('values','status','age')})
             results.append(row)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, indent=2)+'\n')
-
-
-if __name__ == '__main__':
-    main()
-"""Compare candidates on labelled held-out frames with deliberate calibration error."""
-import argparse
-import json
-from pathlib import Path
-
-from compare_readers import RegionReader, frames
-
-
-def main():
-    import cv2
-    import numpy as np
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('video', type=Path)
-    parser.add_argument('--calibration', required=True, type=Path)
-    parser.add_argument('--template', type=Path, default=Path('calibration.json'))
-    parser.add_argument('--labels', required=True, type=Path)
-    parser.add_argument('--output', required=True, type=Path)
-    args = parser.parse_args()
-    config = json.loads(args.calibration.read_text())
-    labels = {round(label['t']*config['sample_fps']): label for label in json.loads(args.labels.read_text()) if label.get('split') == 'heldout'}
-    if not labels:
-        parser.error('At least one heldout label is required')
-    reader = RegionReader(config, json.loads(args.template.read_text()))
-    results = []
-    width, height = config['reference_size']
-    for index, payload in enumerate(frames(args.video, (width, height), config['sample_fps'], max(labels)+1)):
-        if index not in labels:
-            continue
-        frame = np.frombuffer(payload, np.uint8).reshape(height, width, 3)
-        for dx, dy in ((0,0),(-5,0),(5,0),(0,-5),(0,5),(-10,0),(10,0),(0,-10),(0,10)):
-            shifted = cv2.warpAffine(frame, np.float32([[1,0,dx],[0,1,dy]]), (width,height))
-            masks = reader.masks(shifted)
-            for name, method in (('regions',reader.read),('ocr',reader.ocr)):
-                value, digits = method(masks)
-                results.append({'t':labels[index]['t'], 'offset':[dx,dy], 'method':name,
-                    'raw':value, 'digits':digits, 'expected':labels[index]['values'],
-                    'correct':None if value is None else value == labels[index]['values']})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2)+'\n')
 

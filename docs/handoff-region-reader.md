@@ -4,6 +4,8 @@ Prepared 2026-10-31. The user agreed to pursue whole-region recognition, beginni
 
 Follow-up: the first offline glyph-safety stage is now implemented on `codex/region-glyph-safety`; see [evidence and coverage costs](recognition-comparison.md#glyph-safety-follow-up). The known shifted-score window is fixed, with conservative rejection elsewhere. The remaining stages below—explicit safe clock formats, independent field/tenths confirmation, and monitor shadow integration—are still pending. The preparation-time checkout/PR details below describe the starting point.
 
+Second follow-up: `codex/independent-candidate-confirmation` implements explicit selected layouts and independent candidate field confirmation offline. See [rules and validation](candidate-confirmation.md). Synthetic tenths progression confirms from observed values; the real new recording still has no complete tenths observations under the strict glyph checks. Automatic layout detection and monitor shadow integration remain pending. The numbered plan and runtime description below retain their preparation-time context.
+
 ## Goal and current position
 
 Make the reader tolerate ordinary setup differences without positioning 42 tiny probes perfectly. Keep processing local and use the reader as the sole owner of the scoreboard capture device. OBS receives digital output through its browser overlay.

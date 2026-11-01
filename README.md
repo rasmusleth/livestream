@@ -68,6 +68,7 @@ Readings are precomputed from the recording at 10 samples per second and saved i
 `calibration.json` specifies the six digit regions and seven sample locations per digit, in source-image coordinates. The reader measures the bright LED strokes and decodes their segment patterns. Two consecutive matching samples are required before publishing a reading; otherwise the last confirmed values are held and labelled. A hold of one second or longer is marked stale.
 
 The reference calibration supports the supplied 1920×1080 framing and one-digit scores. The local editor below can adapt digit positions to a different framing; each new setup still needs validation. Changes in scoreboard layout, lighting, or multi-digit scores need further work. A transparent OBS browser overlay can follow the verification player. Experimental macOS live capture is available; live scoreboard framing and recognition still need validation. Manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
+The reference calibration supports the supplied 1920×1080 framing and one-digit scores. The local editor below can adapt digit positions to a different framing; each new setup still needs validation. Changes in scoreboard layout, lighting, or multi-digit scores need further work. A transparent OBS browser overlay can follow the verification player. Experimental macOS live capture is available; live scoreboard framing and recognition still need validation. Manual overrides are not implemented yet. See [OBS overlay setup](docs/obs-overlay.md).
 
 ### Validation
 
@@ -132,3 +133,5 @@ Keep OBS from capturing the same device. Check several visible clock and score v
 ## Offline recognition comparison
 
 An isolated experiment compares the existing probes, a rectified whole-digit reader, and local Tesseract OCR on both recordings. The candidate improves reading coverage but still has failures under deliberate framing errors; it is not enabled in the server or OBS overlay. See [findings and limitations](docs/recognition-comparison.md) and [reproduction instructions](experiments/README.md). Optional experiment packages do not change application setup.
+
+The next offline stage adds [explicit clock layouts and independent candidate confirmation](docs/candidate-confirmation.md). Scores can confirm while the clock is unreadable, and synthetic timed tenths sequences can confirm without generating ticks. Strict glyph rejection still prevents tenths confirmation in the new real recording. Monitor shadow integration remains pending; the running reader and OBS behavior are unchanged.

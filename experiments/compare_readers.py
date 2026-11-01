@@ -15,10 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from calibration import FIELDS
 from reader import PATTERNS, recording_rows, probe_recording
+from candidate_state import CandidateState, LayoutPlan, LAYOUTS, MAX_GAP, TIMING_TOLERANCE, FRAME_HISTORY
 
 
 def assemble(digits):
-    """Blank leading minutes are a display format; other missing digits stay unknown."""
+    """Legacy auto-format comparison, not the independent candidate parser."""
     a, b, c, d, home, away = digits
     if any(type(v) is not int or not 0 <= v <= 9 for v in (home, away)):
         return None
@@ -229,6 +230,27 @@ def evaluate(rows, labels, fps):
     return stats
 
 
+def evaluate_fields(rows, labels, fps):
+    """Measure each independent field; held output is never counted as fresh."""
+    # Reuse annotation validation without assigning truth between anchor frames.
+    evaluate([{'raw':None, 'values':None, 'status':'unknown', 'age':None} for _ in rows], labels, fps)
+    result = {}
+    for field in ('home','away','clock'):
+        reviewed = []
+        for label in labels:
+            state = rows[round(label['t']*fps)]['fields'][field]
+            expected = label['values'][field]
+            reviewed.append({'t':label['t'], 'expected':expected, **state,
+                             'observed_correct':None if state['observed'] is None else state['observed'] == expected,
+                             'fresh_correct':None if state['status'] != 'confirmed' else state['value'] == expected})
+        result[field] = {'samples':len(rows),
+                         'observed_available':sum(row['fields'][field]['observed'] is not None for row in rows),
+                         'fresh_confirmed':sum(row['fields'][field]['status'] == 'confirmed' for row in rows),
+                         'reviewed_fresh_wrong':sum(item['fresh_correct'] is False for item in reviewed),
+                         'reviewed':reviewed}
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('video', type=Path)
@@ -238,6 +260,11 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--ocr-psm', type=int, default=13, choices=(7, 13))
     parser.add_argument('--skip-ocr', action='store_true')
+    layout_args = parser.add_mutually_exclusive_group()
+    layout_args.add_argument('--clock-layout', choices=LAYOUTS, default='mmss',
+                             help='Independent candidate layout; never inferred from blanks')
+    layout_args.add_argument('--clock-layout-plan', type=Path,
+                             help='Local JSON [{"start":0,"layout":"mmss"}, ...], explicitly reviewed layouts')
     parser.add_argument('--limit', type=int, help='Development-only maximum sample count')
     args = parser.parse_args()
     if args.limit is not None and args.limit <= 0:
@@ -247,6 +274,8 @@ def main():
     config = json.loads(args.calibration.read_text())
     template = json.loads(args.template.read_text())
     labels = json.loads(args.labels.read_text())
+    plan = LayoutPlan(json.loads(args.clock_layout_plan.read_text()) if args.clock_layout_plan else
+                      [{'start':0, 'layout':args.clock_layout}])
     probe_recording(args.video, config)
     fps = config['sample_fps']
     start = time.perf_counter()
@@ -258,6 +287,8 @@ def main():
     candidate = RegionReader(config, template)
     raw = {'regions': [], 'ocr': []}
     diagnostics = []
+    independent = CandidateState()
+    independent_rows = []
     timings = {'regions': [], 'ocr': []}
     for index, payload in enumerate(frames(args.video, config['reference_size'], fps, args.limit)):
         if args.limit and index >= args.limit:
@@ -267,6 +298,9 @@ def main():
         before = time.perf_counter(); evidence = candidate.inspect(masks)
         value = assemble([item['value'] for item in evidence.values()])
         diagnostics.append(evidence)
+        t = round(index/fps, 3)
+        independent_rows.append(independent.update(evidence, t, layout=plan.at(t),
+                                                    frame_id=hashlib.sha256(payload).hexdigest()))
         timings['regions'].append(shared+time.perf_counter()-before); raw['regions'].append(value)
         if not args.skip_ocr:
             before = time.perf_counter(); value, _ = candidate.ocr(masks, args.ocr_psm)
@@ -287,6 +321,12 @@ def main():
                                 'horizontal_padding_fraction': candidate.HORIZONTAL_PADDING,
                                 'edge_guard_px': candidate.EDGE_GUARD},
               'region_diagnostics': diagnostics,
+              'independent_layout_plan':plan.entries,
+              'independent_policy':{'max_gap_seconds':MAX_GAP, 'timing_tolerance_seconds':TIMING_TOLERANCE,
+                                    'frame_history':FRAME_HISTORY, 'stable_samples':2,
+                                    'progression_or_correction_samples':3},
+              'independent_rows':independent_rows,
+              'independent_metrics':evaluate_fields(independent_rows, labels, fps),
               'metrics': {name: evaluate(values, labels, fps) for name, values in rows.items()}, 'rows': rows}
     for name, durations in timings.items():
         if durations:
