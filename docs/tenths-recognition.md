@@ -39,6 +39,8 @@ Mixed exposure remains a real failure mode: raw valid-looking clocks can jump up
 
 The extended newer-clip translation check uses 17 reviewed anchors × 9 offsets (153 cases): 87 correct complete raw readings, zero wrong and 66 unknown. There are no wrong fresh field confirmations at these reviewed anchors. More diverse, independently reviewed footage and exposure/flicker testing remain necessary.
 
+The subsequent [per-field exposure audit](exposure-validation.md) retains those seven unlabelled clocks explicitly: two are freshly confirmed and five held. Their physical truth remains unresolved, so neither confirmation is counted as correct or wrong. It also reviews original-clip countdown, pause and score-change sequences without changing recognition.
+
 ## Integration verification
 
 The original batch reader was regenerated and still produces 1,638 observations / 52 uncertain raw readings. All 58 application tests pass, including five private-recording regressions. The optional experiment suite passes 17 tests, including independent full RGB drawings that exercise wide left strokes, colon exclusion, blank texture, crop rejection, missing required digits and observed tenths progression/held age through `ShadowReader`.
