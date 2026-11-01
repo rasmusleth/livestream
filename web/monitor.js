@@ -104,3 +104,42 @@ async function refreshPreview() {
 loadGuides();
 refreshPreview();
 setInterval(showPreviewStatus, 500);
+
+const shadowLabels = {home: 'Home', away: 'Away', clock: 'Clock'};
+const shadowLayouts = {mmss: 'Minutes and seconds · four digits', mss: 'Minutes and seconds · leading blank', seconds_tenths: 'Seconds and tenths'};
+async function refreshShadow() {
+  try {
+    const response = await fetch('/api/shadow', {cache: 'no-store', signal: AbortSignal.timeout(1500)});
+    if (!response.ok) throw Error('Candidate unavailable');
+    const shadow = await response.json();
+    const candidate = shadow.candidate;
+    $('shadow-content').hidden = !candidate;
+    $('shadow-status').textContent = !shadow.enabled ? 'Off · restart with --shadow-regions to compare the candidate.' :
+      !candidate ? 'Enabled · waiting for a source frame.' : candidate.error ? `Candidate stopped: ${candidate.error}. Existing reader continues.` :
+      !shadow.connected ? 'Input ended or delayed · candidate values held.' : 'Receiving candidate observations · OBS uses the existing reader.';
+    if (candidate) {
+      $('shadow-layout').textContent = `Selected layout: ${shadowLayouts[candidate.layout]} · source position ${candidate.t.toFixed(1)}s`;
+      $('shadow-fields').replaceChildren();
+      for (const [name, field] of Object.entries(candidate.fields)) {
+        const tr = document.createElement('tr');
+        const age = field.age === null ? 'no confirmation' : `${field.age.toFixed(1)}s old`;
+        for (const value of [shadowLabels[name], field.observed ?? '—', field.value ?? '—',
+          `${field.status}${field.stale ? ' · stale' : ''} · ${age}`, (field.reason ?? 'Accepted observed evidence').replaceAll('_', ' ')]) {
+          const td = document.createElement('td'); td.textContent = value; tr.append(td);
+        }
+        tr.className = field.status;
+        $('shadow-fields').append(tr);
+      }
+      $('shadow-timing').textContent = `Candidate processing ${candidate.processing_ms.toFixed(1)} ms · excludes capture and OBS delay. Preview updates more slowly than readings.`;
+      $('shadow-evidence').textContent = JSON.stringify(candidate.evidence, null, 2);
+    }
+  } catch {
+    $('shadow-status').textContent = 'Candidate connection lost · last values held; freshness unavailable.';
+    for (const tr of $('shadow-fields').children) {
+      tr.className = 'held';
+      tr.children[3].textContent = 'held · freshness unavailable';
+      tr.children[4].textContent = 'Connection lost';
+    }
+  } finally { setTimeout(refreshShadow, 300); }
+}
+refreshShadow();

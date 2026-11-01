@@ -15,7 +15,7 @@ Read `README.md` for setup, `docs/architecture.md` for current and intended boun
 - Keep processing local by default. Do not upload footage or add external services without the user's authorization.
 - Keep recordings, generated readings, credentials, and large binary artifacts out of Git. Synthetic test inputs should be generated during tests.
 - Update the relevant docs when changing behavior, calibration, setup, or architectural decisions. Distinguish implemented features from planned ones.
-- After a completed, validated coding task, push the feature branch and open or update a draft PR when there is a meaningful change ready for review. This is the user’s standing preference; do not ask again unless the scope or destination is unclear. Honor explicit requests to keep work local.
+- Use one active PR targeting `main`. Branch from updated `main`, complete implementation, validation and documentation, then push and open or update a ready-for-review PR. Wait for the user to merge it before beginning dependent implementation; do not stack PRs. Keep closely related stages together when splitting would require a stack. This is the user’s standing preference; do not ask again unless the scope or destination is unclear. Honor explicit requests to keep work local.
 - Leave merging to the user. Do not merge, release, deploy, or change repository access without separate authorization.
 
 ## Scoreboard correctness

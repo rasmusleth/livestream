@@ -6,6 +6,8 @@ Follow-up: the first offline glyph-safety stage is now implemented on `codex/reg
 
 Second follow-up: `codex/independent-candidate-confirmation` implements explicit selected layouts and independent candidate field confirmation offline. See [rules and validation](candidate-confirmation.md). Synthetic tenths progression confirms from observed values; the real new recording still has no complete tenths observations under the strict glyph checks. Automatic layout detection and monitor shadow integration remain pending. The numbered plan and runtime description below retain their preparation-time context.
 
+Current status (2026-11-01): PRs #7–#10 were merged into `main`. The next change adds [opt-in monitor shadow comparison](shadow-reader.md) from updated `main`, with one ready-for-review PR and no stacking. Default output remains on the established reader; camera shadow validation and real tenths glyph recognition remain unresolved. The rest of this handoff is historical planning context.
+
 ## Goal and current position
 
 Make the reader tolerate ordinary setup differences without positioning 42 tiny probes perfectly. Keep processing local and use the reader as the sole owner of the scoreboard capture device. OBS receives digital output through its browser overlay.

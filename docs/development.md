@@ -7,7 +7,9 @@
 - `chore/repository-workflow` builds on that prototype with repository guidance and CI. Its initial PR includes the prototype because `main` started with only the project brief.
 - For later work, branch from updated `main` using `feat/`, `fix/`, `docs/`, or `chore/` plus a descriptive name. These are conventions, not enforced prefixes.
 
-Keep changes reviewable. One person or agent owns a change through implementation, validation, and a clear PR description. After a completed, validated coding task with a meaningful change, push the feature branch and open or update a draft PR by default, unless the user asks to keep it local. The user has authorized this workflow; merging, releases, deployments, and repository access changes still require separate authorization. Human review decides when to merge; this repository has no automatic merging or scheduled coding agent.
+Keep one active PR targeting `main`. Branch from updated `main`, finish the scoped implementation, validation and documentation, then push and open a ready-for-review PR by default. Wait for the user to merge it before starting dependent implementation. Update from `main` after the merge and create the next branch there; do not stack PRs. Keep closely related stages in one PR when splitting them would require stacking. Ready for review means the scoped change is complete and its limitations are documented, not that the whole product is production-ready.
+
+This is the user's standing preference unless they request local-only work or another workflow. Merging, releases, deployments and repository access changes still require separate authorization. Human review decides when to merge; this repository has no automatic merging or scheduled coding agent.
 
 ## Local checks
 
@@ -32,7 +34,6 @@ Five recording regression tests run when generated readings exist and are explic
 
 The offline comparison scripts in `experiments/` have optional packages and a separate experiment test suite. They are compiled by `scripts/check.py` but their dependency-requiring tests are not part of the application CI job. Dependency-free candidate confirmation tests under `tests/` do run in CI. Run optional tests with the isolated environment described in [experiments/README.md](../experiments/README.md); report those results separately. Private video/annotation comparisons are local experiments and do not run in CI.
 
-The offline comparison scripts in `experiments/` have optional packages and a separate seven-test suite. They are compiled by `scripts/check.py` but their dependency-requiring tests are not part of the application CI job. Run them with the isolated environment described in [experiments/README.md](../experiments/README.md); report those results separately. Private video/annotation comparisons are local experiments and do not run in CI.
 
 ## CI
 

@@ -48,6 +48,18 @@ class CaptureSafety(unittest.TestCase):
             with self.assertRaises(ValueError):
                 preview_dimensions({**self.config, 'crop': crop})
 
+    def test_shadow_resolution_guard_and_single_input_command(self):
+        command=camera_command(self.config,'usb video',preview=True,shadow=True)
+        self.assertEqual(command.count('-i'),1)
+        self.assertIn('split=3',command[command.index('-vf')+1])
+        for size,success in [('1920x1080',True),('1280x720',False)]:
+            result=subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-f','lavfi',
+                '-i',f'color=size={size}:rate=5:duration=0.2','-vf',
+                frame_filter(self.config,camera=True,preview=True,shadow=True),'-f','null','-'],
+                capture_output=True,timeout=5)
+            self.assertEqual(result.returncode==0,success,result.stderr.decode())
+        with self.assertRaises(ValueError):frame_filter(self.config,shadow=True)
+
     def test_partial_pipe_reads_are_assembled_into_complete_frames(self):
         width, height = self.config['crop'][2:]
         size = width // 2 * (height // 2) * 3

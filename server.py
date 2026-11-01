@@ -110,6 +110,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = self.path.split('?')[0]
+        if route == '/api/shadow':
+            source = getattr(self.server, 'source', None)
+            if source is None:
+                self.send_error(404)
+            else:
+                self.send_json(source.shadow_snapshot())
+            return
         if route in ('/api/preview', '/api/calibration'):
             source = getattr(self.server, 'source', None)
             if source is None:
@@ -199,7 +206,17 @@ if __name__ == '__main__':
     parser.add_argument('--calibration', type=Path, default=ROOT / 'calibration.json')
     parser.add_argument('--device', help='Explicit AVFoundation camera name; no default camera is selected')
     parser.add_argument('--capture-fps', type=float, default=25)
+    parser.add_argument('--shadow-regions', action='store_true', help='Opt-in diagnostic candidate; never drives OBS')
+    layouts = parser.add_mutually_exclusive_group()
+    layouts.add_argument('--shadow-clock-layout', choices=('mmss','mss','seconds_tenths'))
+    layouts.add_argument('--shadow-clock-layout-plan', type=Path, help='Reviewed layout schedule for recorded input only')
     args = parser.parse_args()
+    if args.shadow_regions and args.mode == 'replay':
+        parser.error('--shadow-regions requires continuous recording or camera mode')
+    if (args.shadow_clock_layout or args.shadow_clock_layout_plan) and not args.shadow_regions:
+        parser.error('Shadow clock options require --shadow-regions')
+    if args.shadow_clock_layout_plan and args.mode != 'recording':
+        parser.error('Scheduled clock layouts are for recorded input only')
     if args.mode != 'camera' and args.device is not None:
         parser.error('--device requires --mode camera')
     if args.mode == 'camera' and (sys.platform != 'darwin' or not args.device):
@@ -212,12 +229,24 @@ if __name__ == '__main__':
                 parser.error('Video filename does not match the analyzed recording.')
         else:
             config = json.loads(args.calibration.read_text())
-            command = (camera_command(config, args.device, args.capture_fps, preview=True) if args.mode == 'camera'
-                       else recording_command(args.video, config, preview=True))
-            source = ContinuousState(args.mode, args.device if args.mode == 'camera' else args.video.name)
+            candidate = None
+            if args.shadow_regions:
+                from candidate_state import LayoutPlan
+                from shadow import ShadowReader
+                plan = LayoutPlan(json.loads(args.shadow_clock_layout_plan.read_text()) if args.shadow_clock_layout_plan
+                                  else [{'start':0,'layout':args.shadow_clock_layout or 'mmss'}])
+                candidate = ShadowReader(config,json.loads((ROOT/'calibration.json').read_text()),plan)
+            command = (camera_command(config, args.device, args.capture_fps, preview=True, shadow=args.shadow_regions) if args.mode == 'camera'
+                       else recording_command(args.video, config, preview=True, shadow=args.shadow_regions))
+            source = ContinuousState(args.mode, args.device if args.mode == 'camera' else args.video.name, shadow=args.shadow_regions)
+            def inspect_shadow(frame, t):
+                source.update_shadow(candidate.read(frame,t))
             worker = InputWorker(source, lambda stop: capture_rows(command, config, stop,
-                camera=args.mode == 'camera', diagnostic=source.diagnostic, preview=source.update_preview))
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+                camera=args.mode == 'camera', diagnostic=source.diagnostic, preview=source.update_preview,
+                shadow=inspect_shadow if candidate else None))
+    except ImportError:
+        parser.error('Shadow mode needs optional packages: python -m pip install -r requirements-shadow.txt')
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         parser.error(str(error))
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     server.video = None if args.mode == 'camera' else args.video.resolve()

@@ -12,3 +12,5 @@
 .panel-reference{display:block;width:100%;max-width:540px;margin:14px 0;fill:#becbdd;font-size:20px}.panel-reference .corner-labels{font-size:14px;fill:#ffdf72}#fine-adjustments{margin-top:18px}#align-board{border-color:#70bcff}
 
 #point-instruction{height:3.2em;overflow:auto}
+
+.shadow-panel{margin-top:20px}.shadow-scroll{overflow-x:auto}.shadow-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:18px}.shadow-table th,.shadow-table td{text-align:left;padding:12px;border-bottom:1px solid #354156;vertical-align:top}.shadow-table th{color:#aab7ca;font-weight:600}.shadow-table td:nth-child(2),.shadow-table td:nth-child(3){font-variant-numeric:tabular-nums;white-space:nowrap}.shadow-table .confirmed td:nth-child(4){color:#9ef0b9}.shadow-table .held td:nth-child(4){color:#ffd48d}
