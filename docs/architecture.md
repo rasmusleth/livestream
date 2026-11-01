@@ -137,3 +137,7 @@ Recorded replay should exercise the same recognition and state logic as live inp
 - **Still to establish:** reliable capture configuration, acceptable end-to-end delay, multiple venues, higher scores, clock formats, manual override semantics, and loss/recovery behavior.
 
 Record significant later decisions with their context and tradeoffs in `docs/`. Update this document as boundaries become implemented.
+
+## Controlled source generation
+
+`scripts/generate_controlled_recording.py` creates an ignored local MP4 bundle with a per-frame source timeline, copied reference calibration and explicit source-time layout plan. It uses an independent line drawing, standard-library rasterization and FFmpeg; it does not use the camera, server or confirmation state. Source intention and deliberately visible fields are separate. Recaptured truth requires independent per-field review and a capture-specific calibration/time mapping; counter visibility alone cannot label mixed pixels. See [capture and evaluation workflow](controlled-recording.md). Candidate output remains disabled.
