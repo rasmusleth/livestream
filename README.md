@@ -153,4 +153,4 @@ The [candidate score-core balance fix](docs/score-core-balance.md) retains uneve
 
 A [bounded colour-contrast veto](docs/score-chroma-rejection.md) now rejects the preserved blurred orange one/five and one/six mixtures without changing the reviewed clean-score results. A broader scan still exposes six other blurred third-digit cases per colour; candidate output remains disabled.
 
-A [six-task OCR comparison plan](docs/ocr-comparison-plan.md) now defines a local whole-field pretrained-OCR experiment, shared uncertainty/confirmation rules, frozen evaluation gates and separate validation on unseen boards. It is planned work; no OCR replacement or output promotion is implemented.
+A [six-task OCR comparison plan](docs/ocr-comparison-plan.md) now defines a local whole-field pretrained-OCR experiment, shared uncertainty/confirmation rules, frozen evaluation gates and separate validation on unseen boards. [Task 1 now freezes the local inputs and decision rules](docs/ocr-benchmark.md), including whole-field colour crops and a recording-level OCR split. Learned OCR feasibility/comparison remains planned; no OCR replacement or output promotion is implemented.
