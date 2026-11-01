@@ -52,3 +52,29 @@ The default `--sequence-radius 5` includes up to five samples before and after e
 No images or audio are saved by these scripts. Numeric output files may be large; keep them ignored. The Regions prototype and OCR baseline still make mistakes. The region implementation is also used by opt-in diagnostic shadow mode; neither candidate drives the overlay. See [the safety follow-up](../docs/recognition-comparison.md#glyph-safety-follow-up) for the fixed shifted-score case and the substantial coverage loss from conservative rejection.
 
 The legacy shared two-identical-observation rule is intentionally retained for comparison. It can fail on a perfectly recognized running tenths clock at 10 Hz. The separate independent state accepts observed timed progression in synthetic tests, and the updated glyph reader now supplies 77 available and 51 freshly confirmed clocks in the new recording's selected 89-sample tenths interval. Mixed exposure still causes unknown/held or plausible raw glitches; these counts are not accuracy. Neither path drives runtime output; [opt-in monitor shadow integration](../docs/shadow-reader.md) now exposes independent candidate diagnostics.
+
+## Explicit per-field source review
+
+Use `audit_readings.py` to retain unreadable fields in the evidence instead of excluding the entire frame. It needs only Python's standard library. A separate review object binds to the report's `video_sha256` and `fps`, describes the manual inspection in `method`, and contains `reviews` entries like this synthetic example:
+
+```json
+{
+  "t": 47.0,
+  "fields": {
+    "clock": { "unreadable": "Mixed LED strokes; physical truth not assigned" },
+    "home": { "value": 1 },
+    "away": { "value": 1 }
+  }
+}
+```
+
+Give the top-level review the exact `video_sha256` and `fps` from the matching report, after checking the video hash. Inspect exact sequential FFmpeg sample indices at that rate; independently seeking video frames can select different images. Give each reviewed field exactly `value` or a nonempty `unreadable` reason. Scores are integers 0–9; clocks use `MM:SS` or `00:SS.t`. Omit fields that were not reviewed. Never use null or a predicted clock as ground truth.
+
+The following commands use ignored local reviews from the [exposure audit](../docs/exposure-validation.md); those private files are not shipped with the repository:
+
+```sh
+python3 experiments/audit_readings.py data/recognition-original-tenths.json data/recognition-original-field-review.json --output data/recognition-original-field-audit.json
+python3 experiments/audit_readings.py data/recognition-live-tenths.json data/recognition-live-field-review.json --output data/recognition-live-field-audit.json
+```
+
+Inputs must have matching video hash/rate and unique exact-grid review timestamps within the full `independent_rows` timeline. The audit checks observation/output equality for fresh confirmations and unchanged values/advancing ages on holds throughout the saved timeline. It writes counts and per-field reviewed states, plus hashes of both input JSON files; it refuses to overwrite either input. It reports fresh confirmations on unreadable frames separately from readable correctness, and counts unreviewed fields explicitly. It does not decode the video or verify the human labels itself. These synthetic accounting/integrity tests run in the normal application CI job without footage or optional packages.
