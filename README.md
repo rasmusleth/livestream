@@ -150,3 +150,5 @@ A [controlled two-minute source recording](docs/controlled-recording.md) can now
 The first [controlled camera recapture evaluation](docs/controlled-recapture-validation.md) now documents separate geometric calibration, 75 reviewed timestamps and explicit held ages. The candidate reads tenths but falsely rejects some visible score threes/fours; the active reader holds through unsupported tenths. Neither result enables candidate output or establishes live readiness.
 
 The [candidate score-core balance fix](docs/score-core-balance.md) retains unevenly bright strokes and recovers the reviewed clear threes/fours in that capture. Known unblurred third-digit guards still pass; blurred orange mixtures remain unresolved, and more source-like mixed readings are admitted in white/red. Candidate output remains disabled.
+
+A [bounded colour-contrast veto](docs/score-chroma-rejection.md) now rejects the preserved blurred orange one/five and one/six mixtures without changing the reviewed clean-score results. A broader scan still exposes six other blurred third-digit cases per colour; candidate output remains disabled.

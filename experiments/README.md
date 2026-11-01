@@ -124,3 +124,9 @@ The first [controlled recapture evaluation](../docs/controlled-recapture-validat
 ## Uneven score brightness
 
 The [score-core balance follow-up](../docs/score-core-balance.md) changes the complementary light fraction from 0.8 to 0.6, retaining its 99th-percentile reference and all disagreement/shape guards. Repeat the four recording comparisons with their frozen profiles/templates/layouts, the existing reviews, translation windows and generated matrix/blur commands, using new `core-balance` output names. The optional suite now has 39 tests, including independent uneven-brightness RGB score drawings and actual shadow loss/staleness/recovery. White/red source-like mixed confirmations increase despite zero unblurred third digits; blurred orange remains failing. Neither availability nor the test count enables candidate output.
+
+## Bounded score colour contrast
+
+The [colour-contrast follow-up](../docs/score-chroma-rejection.md) adds `score_chroma` diagnostics and a bounded competing-mask veto. The selected blurred orange one/five and one/six failures now stay unavailable, while recovered clean-score regressions pass. A wider single-observation blur scan covers all 90 directed pairs, weights .25/.5/.75 and all three colours; it still exposes six third-digit cases per colour. Repeat the confirmation runner with `--pairs 24 42 57 67 75 76 --weights .5 --variant blur` to retain those failures. Mixtures have no assigned physical score.
+
+Repeat the original matrix, selected blur cases, four full comparisons/audits and three older translation-window checks using frozen profiles/labels/layouts and new `chroma-bounded` destinations. Existing `--all-pairs --variant blur` can extend the observation scan into complete sequences; that full blurred sequence matrix was not run in this change. The optional suite now has 45 tests. No candidate output is enabled.

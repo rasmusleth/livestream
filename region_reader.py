@@ -25,6 +25,8 @@ class RegionReader:
     SCORE_LOCAL_KERNEL = 21
     SCORE_LOCAL_FRACTION = .45
     SCORE_LOCAL_FLOOR = 20
+    SCORE_CHROMA_FRACTION = .6
+    SCORE_CHROMA_MIN_CONTRAST = 20
 
     def __init__(self, config, template):
         import cv2
@@ -124,6 +126,34 @@ class RegionReader:
                             'contrast_tail': round(tail, 3), 'contrast_threshold': round(threshold, 3)}
         return result
 
+    def _chromatic_scores(self, patches, primary_masks):
+        """Stronger red colour evidence within the existing primary foreground."""
+        np = self.np
+        result = {}
+        for name, patch, primary in zip(FIELDS, patches, primary_masks):
+            if name not in ('home', 'away'):
+                continue
+            r, g, b = [patch[:, :, i] for i in range(3)]
+            chroma = r-np.maximum(g, b)
+            low, high = np.percentile(chroma, [50, 99])
+            threshold = max(self.SCORE_CHROMA_MIN_CONTRAST,
+                            float(low+self.SCORE_CHROMA_FRACTION*(high-low)))
+            foreground = ((r > 150) & (r >= g*.95) & (chroma > threshold)
+                          & (high-low >= self.SCORE_CHROMA_MIN_CONTRAST)
+                          & (primary != 0))
+            white_fraction = float(np.mean(np.minimum(r, np.minimum(g,b)) >= self.SCORE_WHITE_LEVEL))
+            inspection = self.inspect_digit(self._clean(foreground))
+            # Discarding neutral LED centres can leave only coloured glow and
+            # invent a competing digit. This view is inconclusive in that case.
+            if white_fraction >= self.SCORE_WHITE_FRACTION:
+                inspection.update(value=None, reason='neutral_cores')
+            result[name] = {**inspection,
+                            'white_core_fraction': round(white_fraction, 6),
+                            'chroma_low': round(float(low), 3),
+                            'chroma_high': round(float(high), 3),
+                            'chroma_threshold': round(threshold, 3)}
+        return result
+
     def observe(self, frame):
         """Inspect a frame, rejecting competing valid score interpretations.
 
@@ -132,15 +162,26 @@ class RegionReader:
         inspections keep their crop, narrow-glyph and segment guards.
         """
         patches = self._patches(frame)
-        evidence = self.inspect(self._masks(patches))
+        primary_masks = self._masks(patches)
+        evidence = self.inspect(primary_masks)
         cores = self.inspect(self._masks(patches, score_cores=True))
         local = self._local_scores(patches)
+        chromatic = self._chromatic_scores(patches, primary_masks)
         for name in ('home', 'away'):
             item, core = evidence[name], cores[name]
             value = item['value']
-            item.update(mask_value=value, score_core=core, score_local=local[name])
+            chroma = chromatic[name]
+            alternative = chroma['value']
+            chroma['mask_value'] = alternative
+            # This view only removes primary foreground. Normalizing a thin
+            # coloured rim can otherwise promote glow into a new "on" segment.
+            if type(value) is int and type(alternative) is int and any(
+                    a == '1' and p == '0' for a, p in zip(PATTERNS[alternative], PATTERNS[value])):
+                chroma.update(value=None, reason='unsupported_added_segments')
+            item.update(mask_value=value, score_core=core, score_local=local[name],
+                        score_chroma=chroma)
             if type(value) is int and any(type(other['value']) is int and value != other['value']
-                                          for other in (core, local[name])):
+                                          for other in (core, local[name], chromatic[name])):
                 item.update(value=None, reason='score_mask_disagreement')
         return evidence
 
