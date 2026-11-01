@@ -85,7 +85,7 @@ def sequence(reader, scene, old, new, weight):
         # Tiny variation outside every region avoids identical-payload holds.
         # It models no particular sensor; duplicate-frame rejection stays enabled.
         frame[0, 0] = (index, 0, 0)
-        evidence = reader.inspect(reader.masks(frame))
+        evidence = reader.observe(frame)
         row = state.update(evidence, round(index/10, 3), layout='mmss',
                            frame_id=hashlib.sha256(frame.tobytes()).hexdigest())
         rows.append({'phase': phase, 'expected': expected, 'evidence': evidence, **row})

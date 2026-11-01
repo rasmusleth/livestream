@@ -19,6 +19,7 @@ class RegionReader:
     SCORE_LIGHT_FLOOR = 75
     SCORE_WHITE_LEVEL = 200
     SCORE_WHITE_FRACTION = .01
+    SCORE_CORE_FRACTION = .8
 
     def __init__(self, config, template):
         import cv2
@@ -28,7 +29,7 @@ class RegionReader:
         self.size = tuple(template['reference_size'])
         self.warp = cv2.getPerspectiveTransform(np.float32(config['board_corners']), np.float32(template['board_corners']))
 
-    def masks(self, frame):
+    def _patches(self, frame):
         cv, np = self.cv, self.np
         image = cv.warpPerspective(frame, self.warp, self.size)
         patches = []
@@ -39,6 +40,14 @@ class RegionReader:
             patch = image[max(0, y-py):min(image.shape[0], y+h+py),
                           max(0, x-left):min(image.shape[1], x+w+px)].astype(np.float32)
             patches.append(patch)
+        return patches
+
+    def masks(self, frame):
+        """Primary masks for shape inspection or the separate OCR experiment."""
+        return self._masks(self._patches(frame))
+
+    def _masks(self, patches, *, score_cores=False):
+        cv, np = self.cv, self.np
         # An independently thresholded blank window can promote brown panel
         # texture into LED foreground. Use the other clock slots as a brightness
         # reference too. This floor can only raise each local threshold; it never
@@ -70,6 +79,10 @@ class RegionReader:
                     high = tail
                 if high-low < self.SCORE_MIN_CONTRAST:
                     foreground[:] = False
+                elif score_cores:
+                    threshold = max(self.SCORE_LIGHT_FLOOR,
+                                    float(low+self.SCORE_CORE_FRACTION*(tail-low)))
+                    foreground = (r >= g*.95) & (r > 150) & (light > threshold)
                 elif np.mean(np.minimum(r,neutral) >= self.SCORE_WHITE_LEVEL) >= self.SCORE_WHITE_FRACTION:
                     threshold = max(self.SCORE_LIGHT_FLOOR,float(low+.6*(high-low)))
                     foreground = (r >= g*.95) & (r > 150) & (light > threshold)
@@ -82,6 +95,24 @@ class RegionReader:
                     clean[components == i] = 255
             result.append(clean)
         return result
+
+    def observe(self, frame):
+        """Inspect a frame, rejecting competing valid score interpretations.
+
+        The stronger-light mask can veto, never replace, a primary digit. An
+        unavailable core shape is inconclusive, not a competing score. Both
+        inspections keep their crop, narrow-glyph and segment guards.
+        """
+        patches = self._patches(frame)
+        evidence = self.inspect(self._masks(patches))
+        cores = self.inspect(self._masks(patches, score_cores=True))
+        for name in ('home', 'away'):
+            item, core = evidence[name], cores[name]
+            value = item['value']
+            item.update(mask_value=value, score_core=core)
+            if type(value) is int and type(core['value']) is int and value != core['value']:
+                item.update(value=None, reason='score_mask_disagreement')
+        return evidence
 
     def inspect_digit(self, mask):
         """Return the observed digit and rejection evidence before normalization."""
@@ -133,5 +164,6 @@ class RegionReader:
         return evidence['value'], evidence['levels']
 
     def inspect(self, masks):
+        """Shape-only mask diagnostics; use observe for full RGB recognition."""
         return {name: self.inspect_digit(mask) for name, mask in zip(FIELDS, masks)}
 

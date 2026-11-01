@@ -10,7 +10,7 @@ python3 -m venv /tmp/livestream-recognition-venv
 /tmp/livestream-recognition-venv/bin/python -m unittest discover -s experiments -p 'test_*.py' -v
 ```
 
-OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 27 experiment tests require this environment and are run separately.
+OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 30 experiment tests require this environment and are run separately.
 
 Keep recordings, local profiles, labels, and outputs in ignored local paths. The original benchmark uses tracked `calibration.json`; the new one needs the saved profile matching its framing. Preserve a copy of that profile before further edits. Our local copy is `data/recognition-live-calibration.json`; do not substitute a calibration made for another framing.
 
@@ -96,3 +96,9 @@ The [score-core follow-up](../docs/score-core-recognition.md) changes candidate 
 Repeat the matrix for `--color orange` and `--color red`, choosing corresponding new output names. Without `--pairs` or `--all-pairs`, the default directed pairs are 01, 10, 08, 80, 09, 90, 18 and 81. Default new-source blend weights are .25, .5 and .75. Existing output paths are refused. Reports retain the source pairs, phase, clean expected digits, every candidate field state and digit diagnostic, calibration, package versions and generator/recognizer/state source hashes. They are numeric ignored data, not recordings or image assets.
 
 Only clean home phases have correctness labels; mixed images have no assigned physical score. Fresh confirmations on mixed images and outputs outside both source digits are reported separately. A zero wrong-clean count does not make mixed exposure safe, and a successful command exit reports completed measurement rather than successful recognition. The full white/orange/red matrices each expose twenty fresh confirmations outside both source digits. This is a controlled blend test, not calibrated camera exposure, clock-mixture, arbitrary-framing or live validation. Candidate output remains disabled.
+
+## Candidate score-mask disagreement
+
+Full candidate recognition now uses `RegionReader.observe(frame)` for the [score-mask disagreement guard](../docs/score-mask-disagreement.md). It rejects competing valid primary/core digits, preserves both interpretations in diagnostics, and never substitutes the core digit. Mask-only helpers remain shape/OCR diagnostics and do not apply the veto. Comparison, translation, generated exposure and actual shadow paths all use the full API.
+
+Repeat the existing three recording comparisons/audits and translation commands with new output names containing `score-agreement`, keeping their profiles, labels and explicit layouts. Repeat all three generated matrices with names such as `data/candidate-exposure-white-score-agreement.json`, preserving the initial reports. Current generated fresh third-digit counts are four per colour, down from twenty; balanced six/nine blends still confirm five. Existing recorded field states and translation results are unchanged. The optional suite now has 30 tests. Candidate output remains disabled.
