@@ -10,7 +10,7 @@ python3 -m venv /tmp/livestream-recognition-venv
 /tmp/livestream-recognition-venv/bin/python -m unittest discover -s experiments -p 'test_*.py' -v
 ```
 
-OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 30 experiment tests require this environment and are run separately.
+OpenCV/NumPy are shared optional dependencies for experiments and opt-in shadow mode; default application setup does not require them. The standard repository check compiles these files without importing them; it runs the application and dependency-free candidate-state tests. The 35 experiment tests require this environment and are run separately.
 
 Keep recordings, local profiles, labels, and outputs in ignored local paths. The original benchmark uses tracked `calibration.json`; the new one needs the saved profile matching its framing. Preserve a copy of that profile before further edits. Our local copy is `data/recognition-live-calibration.json`; do not substitute a calibration made for another framing.
 
@@ -101,4 +101,16 @@ Only clean home phases have correctness labels; mixed images have no assigned ph
 
 Full candidate recognition now uses `RegionReader.observe(frame)` for the [score-mask disagreement guard](../docs/score-mask-disagreement.md). It rejects competing valid primary/core digits, preserves both interpretations in diagnostics, and never substitutes the core digit. Mask-only helpers remain shape/OCR diagnostics and do not apply the veto. Comparison, translation, generated exposure and actual shadow paths all use the full API.
 
-Repeat the existing three recording comparisons/audits and translation commands with new output names containing `score-agreement`, keeping their profiles, labels and explicit layouts. Repeat all three generated matrices with names such as `data/candidate-exposure-white-score-agreement.json`, preserving the initial reports. Current generated fresh third-digit counts are four per colour, down from twenty; balanced six/nine blends still confirm five. Existing recorded field states and translation results are unchanged. The optional suite now has 30 tests. Candidate output remains disabled.
+Repeat the existing three recording comparisons/audits and translation commands with new output names containing `score-agreement`, keeping their profiles, labels and explicit layouts. Repeat all three generated matrices with names such as `data/candidate-exposure-white-score-agreement.json`, preserving the initial reports. At that stage generated fresh third-digit counts were four per colour, down from twenty; balanced six/nine blends still confirmed five. Existing recorded field states and translation results are unchanged. The optional suite now has 30 tests. Candidate output remains disabled.
+
+## Local RGB contrast and controlled variants
+
+The [local contrast guard](../docs/local-score-contrast.md) adds score-only RGB top-hat evidence to the full observation API. It can veto a conflicting primary digit, never replace it. The original unblurred matrix now has zero third-digit observations/confirmations, with clean raw readings retained and fifteen fewer fresh clean confirmations per colour than the previous guard. Recorded field states remain unchanged.
+
+`exposure_stress.py --variant none|blur|dim|shift` retains the selected recipe in its reports. Default `none` preserves previous rendering; `blur` is 5×5 Gaussian/sigma 1, `dim` is encoded-RGB gain 0.8, and `shift` is +3/+2 pixels. These transformations apply before frame-identity variation. They are controlled drawings, not calibrated camera models. For example:
+
+```sh
+/tmp/livestream-recognition-venv/bin/python experiments/exposure_stress.py --pairs 15 16 51 61 69 96 --weights .5 --color orange --variant blur --output data/candidate-exposure-orange-local-blur.json
+```
+
+This blurred check still exposes eight fresh third-digit confirmations for orange, and eight for red. White has none in that selected check. Preserve these failures alongside the successful unperturbed matrix; they remain unresolved. Repeat the three recording comparison/audit/translation commands with `local-contrast` output names and the original profiles, labels and layouts. The optional suite now has 35 tests. Candidate output remains disabled.

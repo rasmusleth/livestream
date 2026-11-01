@@ -24,6 +24,7 @@ LINES = (((18, 8), (64, 8)), ((68, 14), (64, 48)), ((63, 57), (59, 91)),
          ((12, 98), (53, 98)), ((7, 90), (11, 56)), ((12, 47), (16, 14)),
          ((15, 52), (58, 52)))
 COLORS = {'white': (255, 250, 255), 'orange': (255, 100, 0), 'red': (255, 0, 0)}
+VARIANTS = ('none', 'blur', 'dim', 'shift')
 
 
 class ExposureScene:
@@ -68,8 +69,19 @@ class ExposureScene:
         return self.np.rint((1-weight)*self.endpoint(old).astype(float)
                             + weight*self.endpoint(new).astype(float)).astype(self.np.uint8)
 
+    def transform(self, frame, variant):
+        if variant == 'none':
+            return frame.copy()
+        if variant == 'blur':
+            return self.cv.GaussianBlur(frame, (5, 5), 1)
+        if variant == 'dim':
+            return self.np.rint(frame.astype(float)*.8).astype(self.np.uint8)
+        if variant == 'shift':
+            return self.cv.warpAffine(frame, self.np.float32([[1, 0, 3], [0, 1, 2]]), (1920, 1080))
+        raise ValueError('Unknown generated exposure variant')
 
-def sequence(reader, scene, old, new, weight):
+
+def sequence(reader, scene, old, new, weight, *, variant='none'):
     if old == new:
         raise ValueError('An exposure sequence needs two different source scores')
     before, after = scene.endpoint(old), scene.endpoint(new)
@@ -81,7 +93,7 @@ def sequence(reader, scene, old, new, weight):
     state = CandidateState()
     rows = []
     for index, (phase, source, expected) in enumerate(phases):
-        frame = source.copy()
+        frame = scene.transform(source, variant)
         # Tiny variation outside every region avoids identical-payload holds.
         # It models no particular sensor; duplicate-frame rejection stays enabled.
         frame[0, 0] = (index, 0, 0)
@@ -89,7 +101,8 @@ def sequence(reader, scene, old, new, weight):
         row = state.update(evidence, round(index/10, 3), layout='mmss',
                            frame_id=hashlib.sha256(frame.tobytes()).hexdigest())
         rows.append({'phase': phase, 'expected': expected, 'evidence': evidence, **row})
-    return {'old': old, 'new': new, 'new_weight': weight, 'color': scene.color, 'rows': rows}
+    return {'old': old, 'new': new, 'new_weight': weight, 'color': scene.color,
+            'variant': variant, 'rows': rows}
 
 
 def summarize(cases):
@@ -128,6 +141,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='Ignored numeric JSON report destination')
     parser.add_argument('--color', choices=COLORS, default='white')
+    parser.add_argument('--variant', choices=VARIANTS, default='none',
+                        help='Controlled full-frame variant: blur (5x5/sigma 1), dim (0.8), shift (+3,+2)')
     pair_args = parser.add_mutually_exclusive_group()
     pair_args.add_argument('--pairs', nargs='+', default=['01', '10', '08', '80', '09', '90', '18', '81'],
                         help='Directed source-score pairs, e.g. 01 10; default covers 0/1/8/9 confusions')
@@ -150,11 +165,14 @@ def main():
     cases = []
     for old, new in pairs:
         for weight in args.weights:
-            cases.append(sequence(reader, scene, old, new, weight))
+            cases.append(sequence(reader, scene, old, new, weight, variant=args.variant))
         print(f'{old} -> {new} processed', flush=True)
     result = {'kind': 'generated_score_exposure_stress', 'schema_version': 1,
               'fps': 10, 'calibration': config,
               'candidate_output_enabled': False,
+              'variant': args.variant,
+              'variant_policy': {'blur': {'kernel': [5, 5], 'sigma': 1},
+                                 'dim': {'gain': .8}, 'shift': {'pixels': [3, 2]}},
               'versions': {'opencv': scene.cv.__version__, 'numpy': scene.np.__version__},
               'code_sha256': {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
                               for path in (Path(__file__).resolve(), ROOT/'region_reader.py', ROOT/'candidate_state.py')},
