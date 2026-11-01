@@ -191,5 +191,71 @@ class WholeRegions(unittest.TestCase):
         self.assertIsNone(value)
         self.assertEqual(digits,[None]*6)
 
+    def score_fixture(self, digit=0, color=(255,250,255), halo=False):
+        # Independent slanted LED strokes, drawn as lines rather than sampled
+        # from the recognizer's normalized segment rectangles. No footage.
+        frame=np.full((1080,1920,3),[150,95,100],np.uint8)
+        lines=[((18,8),(64,8)),((68,14),(64,48)),((63,57),(59,91)),
+               ((12,98),(53,98)),((7,90),(11,56)),((12,47),(16,14)),((15,52),(58,52))]
+        for x,y in ((643,724),(1319,729)):
+            if halo:
+                frame[y-4:y+110,x-4:x+80]=[210,95,125]
+                self.reader.cv.line(frame,(x+15,y+52),(x+58,y+52),(248,95,130),8)
+            for bit,(a,b) in zip(PATTERNS[digit],lines):
+                if bit=='0':continue
+                a,b=(x+a[0],y+a[1]),(x+b[0],y+b[1])
+                if halo:self.reader.cv.line(frame,a,b,(255,95,130),18)
+                self.reader.cv.line(frame,a,b,color,10)
+        return frame
+
+    def test_score_white_cores_reject_red_glow_inside_hollow_zero(self):
+        frame=self.score_fixture(halo=True)
+        evidence=self.reader.inspect(self.reader.masks(frame))
+        # The pre-fix mask reads both as 8: red middle glow survives while the
+        # white LED centres are discarded by the red-minus-blue gate.
+        self.assertEqual((evidence['home']['value'],evidence['away']['value']),(0,0))
+        state=CandidateState()
+        for i in range(3):
+            row=state.update(evidence,i/10,layout='mmss',frame_id=str(i))
+        for name in ('home','away'):
+            self.assertEqual(row['fields'][name]['value'],0)
+            self.assertEqual(row['fields'][name]['status'],'confirmed')
+
+    def test_all_score_digits_with_red_or_white_led_cores(self):
+        for color in ((255,250,255),(255,100,0),(255,0,0)):
+            for digit in range(10):
+                with self.subTest(color=color,digit=digit):
+                    evidence=self.reader.inspect(self.reader.masks(self.score_fixture(digit,color)))
+                    self.assertEqual((evidence['home']['value'],evidence['away']['value']),(digit,digit))
+
+    def test_low_contrast_score_texture_holds_with_age_then_recovers(self):
+        config=json.loads((Path(__file__).resolve().parents[1]/'calibration.json').read_text())
+        reader=ShadowReader(config,config,LayoutPlan([{'start':0,'layout':'mmss'}]))
+        for i in range(2):
+            frame=self.score_fixture(halo=True);frame[0,0,0]+=i
+            row=reader.read(frame.tobytes(),i/10)
+        self.assertEqual(row['fields']['home']['value'],0)
+        for i in range(2,5):
+            frame=self.score_fixture(8,(166,95,100));frame[0,0,0]+=i
+            row=reader.read(frame.tobytes(),i/10)
+            for name in ('home','away'):
+                field=row['fields'][name]
+                self.assertIsNone(field['observed'])
+                self.assertEqual((field['value'],field['status']),(0,'held'))
+                self.assertEqual(field['age'],round((i-1)/10,3))
+        for i in range(5,8):
+            frame=self.score_fixture(8);frame[0,0,0]+=i
+            row=reader.read(frame.tobytes(),i/10)
+        for name in ('home','away'):
+            self.assertEqual((row['fields'][name]['value'],row['fields'][name]['status']),(8,'confirmed'))
+
+    def test_white_score_cropping_keeps_the_existing_guard(self):
+        frame=self.score_fixture()
+        shifted=self.reader.cv.warpAffine(frame,np.float32([[1,0,0],[0,1,-40]]),(1920,1080))
+        evidence=self.reader.inspect(self.reader.masks(shifted))
+        for name in ('home','away'):
+            self.assertIsNone(evidence[name]['value'])
+            self.assertEqual(evidence[name]['reason'],'edge_foreground')
+
 
 if __name__=='__main__':unittest.main()

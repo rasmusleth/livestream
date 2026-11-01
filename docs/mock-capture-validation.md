@@ -4,6 +4,8 @@ The monitor recording exposes confirmed score errors in both readers. The region
 
 No recognition, thresholds, server, UI or OBS behavior was changed in this validation. No camera or existing user server was opened or stopped. All footage, local profiles, labels, contact sheets and numeric reports remain local and outside Git.
 
+The subsequent [candidate score-core fix](score-core-recognition.md) removes the reviewed candidate zero-to-eight confirmations and records its availability tradeoff. The measurements below preserve the pre-fix evidence. The established reader's failures remain unchanged.
+
 ## Input and calibration
 
 The operator recorded `scoreboard-2-min-clip.mp4` playing from beginning to end on a monitor, filmed through the camera/capture device and saved through OBS as `mock-scoreboard-testing-clip.mkv`. The new file reports 1920×1080, 60 fps and 163.667 seconds, compared with the source's 163.8256 seconds. File frame-rate metadata does not establish unique camera frames or live capture throughput. The two audio tracks were ignored; analysis decodes video only.
