@@ -15,6 +15,10 @@ class RegionReader:
     # of wider glyphs, but keep the third slot clear of the physical colon.
     CLOCK_LEFT_PADDING = {'minutes_tens':.20, 'minutes_units':.12,
                           'seconds_tens':.04, 'seconds_units':.12}
+    SCORE_MIN_CONTRAST = 20
+    SCORE_LIGHT_FLOOR = 75
+    SCORE_WHITE_LEVEL = 200
+    SCORE_WHITE_FRACTION = .01
 
     def __init__(self, config, template):
         import cv2
@@ -50,7 +54,26 @@ class RegionReader:
             threshold = max(150,float(low+.6*(high-low)))
             if name in self.CLOCK_LEFT_PADDING:
                 threshold = max(threshold,clock_floor)
-            mask = ((r >= g*.95) & (r-b > 35) & (r > threshold)).astype(np.uint8)*255
+            foreground = (r >= g*.95) & (r-b > 35) & (r > threshold)
+            if name in ('home','away'):
+                # Red can saturate in the glow inside a hollow zero while its
+                # actual LED cores become white. Red-only contrast then admits
+                # the glow and removes the cores. Include their neutral light
+                # when measuring contrast; retain the red brightness gate.
+                neutral = np.minimum(g,b)
+                light = np.maximum(r-np.maximum(g,b), (r+neutral)/2)
+                low, high, tail = np.percentile(light, [50, 95, 99])
+                # A narrow 1 can occupy less than 5% of its padded window.
+                # Use the tail only when the usual reference has no contrast;
+                # otherwise a few white peaks can erase a red digit's stem.
+                if high-low < self.SCORE_MIN_CONTRAST:
+                    high = tail
+                if high-low < self.SCORE_MIN_CONTRAST:
+                    foreground[:] = False
+                elif np.mean(np.minimum(r,neutral) >= self.SCORE_WHITE_LEVEL) >= self.SCORE_WHITE_FRACTION:
+                    threshold = max(self.SCORE_LIGHT_FLOOR,float(low+.6*(high-low)))
+                    foreground = (r >= g*.95) & (r > 150) & (light > threshold)
+            mask = foreground.astype(np.uint8)*255
             mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8))
             count, components, stats, _ = cv.connectedComponentsWithStats(mask)
             clean = np.zeros_like(mask)
