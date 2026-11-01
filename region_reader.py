@@ -20,6 +20,9 @@ class RegionReader:
     SCORE_WHITE_LEVEL = 200
     SCORE_WHITE_FRACTION = .01
     SCORE_CORE_FRACTION = .8
+    SCORE_LOCAL_KERNEL = 21
+    SCORE_LOCAL_FRACTION = .45
+    SCORE_LOCAL_FLOOR = 20
 
     def __init__(self, config, template):
         import cv2
@@ -86,31 +89,56 @@ class RegionReader:
                 elif np.mean(np.minimum(r,neutral) >= self.SCORE_WHITE_LEVEL) >= self.SCORE_WHITE_FRACTION:
                     threshold = max(self.SCORE_LIGHT_FLOOR,float(low+.6*(high-low)))
                     foreground = (r >= g*.95) & (r > 150) & (light > threshold)
-            mask = foreground.astype(np.uint8)*255
-            mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-            count, components, stats, _ = cv.connectedComponentsWithStats(mask)
-            clean = np.zeros_like(mask)
-            for i in range(1, count):
-                if stats[i, cv.CC_STAT_AREA] >= 8:
-                    clean[components == i] = 255
-            result.append(clean)
+            result.append(self._clean(foreground))
+        return result
+
+    def _clean(self, foreground):
+        cv, np = self.cv, self.np
+        mask = foreground.astype(np.uint8)*255
+        mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+        count, components, stats, _ = cv.connectedComponentsWithStats(mask)
+        clean = np.zeros_like(mask)
+        for i in range(1, count):
+            if stats[i, cv.CC_STAT_AREA] >= 8:
+                clean[components == i] = 255
+        return clean
+
+    def _local_scores(self, patches):
+        """Complementary RGB top-hat evidence for faint, localized LED strokes."""
+        cv, np = self.cv, self.np
+        kernel = np.ones((self.SCORE_LOCAL_KERNEL, self.SCORE_LOCAL_KERNEL), np.uint8)
+        result = {}
+        for name, patch in zip(FIELDS, patches):
+            if name not in ('home', 'away'):
+                continue
+            background = cv.morphologyEx(patch, cv.MORPH_OPEN, kernel)
+            delta = np.maximum(0, patch-background)
+            contrast = np.sqrt(np.sum(delta*delta, axis=2))
+            tail = float(np.percentile(contrast, 99))
+            threshold = max(self.SCORE_LOCAL_FLOOR, self.SCORE_LOCAL_FRACTION*tail)
+            r, g = patch[:, :, 0], patch[:, :, 1]
+            foreground = (r >= g*.95) & (r > 150) & (contrast > threshold)
+            result[name] = {**self.inspect_digit(self._clean(foreground)),
+                            'contrast_tail': round(tail, 3), 'contrast_threshold': round(threshold, 3)}
         return result
 
     def observe(self, frame):
         """Inspect a frame, rejecting competing valid score interpretations.
 
-        The stronger-light mask can veto, never replace, a primary digit. An
-        unavailable core shape is inconclusive, not a competing score. Both
+        Complementary masks can veto, never replace, a primary digit. An
+        unavailable shape is inconclusive, not a competing score. All
         inspections keep their crop, narrow-glyph and segment guards.
         """
         patches = self._patches(frame)
         evidence = self.inspect(self._masks(patches))
         cores = self.inspect(self._masks(patches, score_cores=True))
+        local = self._local_scores(patches)
         for name in ('home', 'away'):
             item, core = evidence[name], cores[name]
             value = item['value']
-            item.update(mask_value=value, score_core=core)
-            if type(value) is int and type(core['value']) is int and value != core['value']:
+            item.update(mask_value=value, score_core=core, score_local=local[name])
+            if type(value) is int and any(type(other['value']) is int and value != other['value']
+                                          for other in (core, local[name])):
                 item.update(value=None, reason='score_mask_disagreement')
         return evidence
 

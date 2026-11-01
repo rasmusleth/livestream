@@ -159,8 +159,77 @@ class ExposureStress(unittest.TestCase):
                     observed = self.reader.observe(frame)
                     self.assertEqual(observed['home']['value'], digit)
                     self.assertEqual(observed['home']['score_core']['value'], digit)
+                    self.assertEqual(observed['home']['score_local']['value'], digit)
                     for name in ('minutes_tens', 'minutes_units', 'seconds_tens', 'seconds_units'):
                         self.assertEqual(observed[name], primary[name])
+
+    def test_balanced_six_nine_mixtures_are_unavailable_instead_of_five(self):
+        for color in ('white', 'orange', 'red'):
+            scene = ExposureScene(self.config, color)
+            for old, new in ((6, 9), (9, 6)):
+                with self.subTest(color=color, old=old, new=new):
+                    evidence = self.reader.observe(scene.mixed(old, new, .5))['home']
+                    self.assertEqual(evidence['mask_value'], 5)
+                    self.assertEqual(evidence['score_core']['value'], 5)
+                    self.assertEqual(evidence['score_local']['value'], 8)
+                    self.assertIsNone(evidence['value'])
+                    self.assertEqual(evidence['reason'], 'score_mask_disagreement')
+
+    def test_local_conflict_holds_original_age_then_requires_clean_recovery(self):
+        scene = ExposureScene(self.config)
+        for old, new in ((6, 9), (9, 6)):
+            reader = ShadowReader(self.config, self.config, LayoutPlan([{'start': 0, 'layout': 'mmss'}]))
+            frames = [scene.endpoint(old)]*3 + [scene.mixed(old, new, .5)]*3 + [scene.endpoint(new)]*3
+            for index, source in enumerate(frames):
+                frame = source.copy()
+                frame[0, 0] = (index, 0, 0)
+                row = reader.read(frame.tobytes(), index/10)
+                self.assertIsNone(row['error'])
+                if 3 <= index <= 6:
+                    home = row['fields']['home']
+                    self.assertEqual((home['value'], home['status']), (old, 'held'))
+                    self.assertAlmostEqual(home['age'], (index-2)/10)
+                    if index <= 5:
+                        self.assertIsNone(home['observed'])
+                    self.assertEqual(row['fields']['clock']['status'], 'confirmed')
+                    self.assertEqual(row['fields']['away']['status'], 'confirmed')
+            self.assertEqual((row['fields']['home']['value'], row['fields']['home']['status']), (new, 'confirmed'))
+
+    def test_rgb_local_contrast_keeps_white_zero_with_red_middle_glow(self):
+        scene = ExposureScene(self.config)
+        frame = scene.base.copy()
+        frame[720:834, 639:723] = (210, 95, 125)
+        scene.cv.line(frame, (658, 776), (701, 776), (248, 95, 130), 8)
+        scene.draw(frame, 0, 643, 724, (255, 250, 255))
+        evidence = self.reader.observe(frame)['home']
+        self.assertEqual(evidence['mask_value'], 0)
+        self.assertEqual(evidence['score_core']['value'], 0)
+        self.assertEqual(evidence['score_local']['value'], 0)
+        self.assertEqual(evidence['value'], 0)
+        self.assertIsNone(evidence['reason'])
+
+    def test_local_digit_never_rescues_primary_edge_rejection(self):
+        scene = ExposureScene(self.config, 'orange')
+        frame = scene.endpoint(0).copy()
+        frame[740:790, 616:642] = (255, 100, 0)
+        evidence = self.reader.observe(frame)['home']
+        self.assertIsNone(evidence['mask_value'])
+        self.assertEqual(evidence['reason'], 'edge_foreground')
+        self.assertEqual(evidence['score_local']['value'], 0)
+        self.assertIsNone(evidence['value'])
+
+    def test_controlled_variants_retain_clean_digits_without_mutating_sources(self):
+        for color in ('white', 'orange', 'red'):
+            scene = ExposureScene(self.config, color)
+            for digit in range(10):
+                source = scene.endpoint(digit).copy()
+                for variant in ('blur', 'dim', 'shift'):
+                    with self.subTest(color=color, digit=digit, variant=variant):
+                        frame = scene.transform(source, variant)
+                        self.assertEqual(self.reader.observe(frame)['home']['value'], digit)
+                        np.testing.assert_array_equal(scene.endpoint(digit), source)
+            with self.assertRaises(ValueError):
+                scene.transform(source, 'unrecognized')
 
 
 if __name__ == '__main__':

@@ -2,6 +2,8 @@
 
 The diagnostic candidate now rejects a score when its normal mask and a stronger-light mask produce different valid digits. This prevents the generated one/five and one/six mixtures from confirming nine and eight, respectively. It never substitutes the stronger mask's digit. Balanced six/nine mixtures still confirm five, and previously ambiguous recorded transitions remain unresolved. Candidate output stays disabled; the active reader and OBS output are unchanged.
 
+The later [local RGB contrast guard](local-score-contrast.md) rejects the balanced six/nine cases in the original matrix without changing recorded output. Controlled blur still produces third-digit confirmations. The counts below preserve the preceding two-mask stage.
+
 ## Focused rule
 
 `RegionReader.observe(frame)` rectifies the source once and extracts the existing patches. It inspects the unchanged primary masks, then a second set of masks using the existing [score-light signal](score-core-recognition.md):

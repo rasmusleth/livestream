@@ -2,7 +2,7 @@
 
 The diagnostic candidate can confirm a third score when a generated image blends two different source digits. The new offline `experiments/exposure_stress.py` makes this failure repeatable without private footage or camera access. It adds validation infrastructure and evidence; recognition, confirmation rules, the active reader and OBS output are unchanged. Candidate output stays disabled.
 
-The later [score-mask disagreement guard](score-mask-disagreement.md) reduces fresh third-digit confirmations from twenty to four per LED colour on this matrix, without losing clean raw readings. The baseline counts below preserve this initial experiment; balanced six/nine blends still fail.
+The later [score-mask disagreement guard](score-mask-disagreement.md) reduces fresh third-digit confirmations from twenty to four per LED colour on this matrix, without losing clean raw readings. The baseline counts below preserve this initial experiment. A subsequent [local RGB guard](local-score-contrast.md) rejects the balanced six/nine cases in the original matrix; newly repeatable blur variants still expose third-digit failures.
 
 ## Why this test
 
