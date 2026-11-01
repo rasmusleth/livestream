@@ -114,3 +114,7 @@ The [local contrast guard](../docs/local-score-contrast.md) adds score-only RGB 
 ```
 
 This blurred check still exposes eight fresh third-digit confirmations for orange, and eight for red. White has none in that selected check. Preserve these failures alongside the successful unperturbed matrix; they remain unresolved. Repeat the three recording comparison/audit/translation commands with `local-contrast` output names and the original profiles, labels and layouts. The optional suite now has 35 tests. Candidate output remains disabled.
+
+## Controlled source preparation
+
+See [controlled recording and recapture](../docs/controlled-recording.md) for the dependency-free source generator, timeline semantics and coordinated capture procedure. The optional suite includes a clean-source anchor check for all score digits, both explicit layouts and deliberately unavailable fields (36 optional tests at this stage). This is a direct generated-drawing check, not evidence of capture-chain accuracy.

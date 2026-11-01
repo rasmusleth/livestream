@@ -144,3 +144,5 @@ The [candidate score-core fix](docs/score-core-recognition.md) removes the revie
 The [active probe safety guard](docs/probe-core-rejection.md) now rejects contradictory white LED cores, preventing the four known wrong recapture confirmations by leaving output unknown. It does not make the recapture readable; original/newer probe output and candidate recognition are unchanged.
 
 An [opt-in monitor comparison](docs/shadow-reader.md) is now available with `--mode recording --shadow-regions` and optional local image packages. It processes the same input frames as the established reader, shows per-field candidate diagnostics and never changes OBS output. Shadow mode is off by default. Camera shadow throughput and live recognition still need a coordinated hardware check.
+
+A [controlled two-minute source recording](docs/controlled-recording.md) can now be generated locally for a coordinated display/camera recapture. It includes digit sweeps, paused and tenths clocks, corrections, deliberate unavailable fields and a source-frame reference strip. Generation is offline; the captured fields still require independent review before accuracy claims.
