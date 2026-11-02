@@ -134,3 +134,7 @@ Repeat the original matrix, selected blur cases, four full comparisons/audits an
 ## Planned modern OCR comparison
 
 Follow the [six-task working plan](../docs/ocr-comparison-plan.md) sequentially. The historical Tesseract path above uses thresholded digit masks; the planned comparison instead retains original colour whole-field crops and shared uncertainty/confirmation semantics. First freeze the benchmark and decision rules, then verify a local pretrained model in a separate environment. No new OCR engine, model dependency or multi-digit confirmation support is installed or implemented by the planning change.
+
+## Frozen whole-field OCR benchmark
+
+[Task 1 benchmark and reproduction](../docs/ocr-benchmark.md) defines the private input recipe, RGB crop export, whole-recording OCR split and hash lock. `python3 experiments/ocr_benchmark.py verify data/controlled-recordings/v1/ocr-benchmark-v1/manifest-r2.json` checks the frozen assets without optional image packages. Crop export uses the existing optional environment. No learned OCR engine is installed or run; later feasibility uses development recordings only. The portable [comparison contract](benchmark/contract-v1.json) fixes correctness, unreadable exposure, held ages, recovery and practical-cost gates.

@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "fps": 10,
+  "decode": [
+    "ffmpeg",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    "{video}",
+    "-an",
+    "-vf",
+    "fps=10",
+    "-f",
+    "rawvideo",
+    "-pix_fmt",
+    "rgb24",
+    "pipe:1"
+  ],
+  "fields": [
+    "home",
+    "away",
+    "clock"
+  ],
+  "scope": "One calibrated panel; one-digit scores and explicit mmss/mss/seconds_tenths layouts. No cross-board claim.",
+  "geometry": "Original RGB, bilinear panel rectification to template reference size, then contiguous whole-field crop. No colour masks, digit concatenation, OCR-dependent trim or resize. Engine preprocessing must be separately recorded.",
+  "splits": [
+    "development",
+    "verification"
+  ],
+  "verification_policy": "Lock by whole recording, never adjacent-frame random splits. Original/live/controlled are OCR development; monitor recapture is OCR configuration verification only. All four are known region-reader development/regression footage on this panel, not unseen-board or independent-baseline validation. Do not inspect new OCR output on the verification recording until settings are frozen; tuning retires it to development. True board/session holdout deferred to task 5.",
+  "metrics": {
+    "readable": [
+      "observed_correct",
+      "observed_wrong",
+      "observed_unknown",
+      "fresh_correct",
+      "fresh_wrong",
+      "readable_held",
+      "readable_unknown",
+      "held_value_correct",
+      "held_value_wrong"
+    ],
+    "unreadable": [
+      "unreadable_observed",
+      "unreadable_fresh",
+      "unreadable_held",
+      "unreadable_unknown"
+    ],
+    "coverage": [
+      "readable",
+      "unreadable",
+      "unreviewed",
+      "all_observed_available",
+      "all_fresh_confirmed"
+    ],
+    "temporal": [
+      "maximum_hold_age_s",
+      "stale_source_duration_s",
+      "recovery_samples",
+      "confirmation_delay_samples"
+    ],
+    "runtime": [
+      "three_fields_ms_median",
+      "three_fields_ms_p95",
+      "sustained_source_fps",
+      "cold_start_s",
+      "warm_start_s",
+      "peak_rss_bytes",
+      "cpu_seconds",
+      "weights_bytes",
+      "setup_notes"
+    ]
+  },
+  "metric_rules": {
+    "accounting": "Use audit_readings counters, per engine/recording/field/split/window; never pool unreadable with wrong or unreviewed with correct. Held matching values are not fresh success.",
+    "temporal": "Run full source history from zero, never restart state at review windows. Age uses source time, stale age >=1s. Duration = count of held stale source-grid samples/fps. Confirmation delay starts at the first reviewed clearly readable sample after a value change or unavailable run; recovery starts after unavailable input. Require a complete reviewed sequence through confirmation; otherwise right-censored, never zero. Report source-grid delay separately from wall-time latency.",
+    "runtime": "One isolated streaming Mac worker, all three fields; model-only and full pipeline separately, include decode/crop/parse/state boundaries and backend/precision/thread settings. 10 source fps and 100ms per sample provisional; not hardware-to-OBS latency.",
+    "synthetic": "Generated clean labels separate from physical footage. Mixtures have no physical truth; count third-digit observations/fresh confirmations separately, including preserved blurred failures. Use exposure_stress source hash and declared matrix, never assign old/new mixture truth."
+  },
+  "gates": [
+    {
+      "id": "fresh_readable",
+      "rule": "No new wrong fresh readable confirmation versus frozen region baseline at any reviewed sample; a new per-sample error fails even if aggregate count falls."
+    },
+    {
+      "id": "unreadable_exposure",
+      "rule": "No additional fresh confirmation on reviewed unreadable fields versus frozen region baseline, compared per sample; report retained baseline risks separately."
+    },
+    {
+      "id": "clean_regressions",
+      "rule": "Retain correct fresh output where baseline confirms reviewed clean score anchors; no wrong raw clean-score observations. Report unavailable regressions explicitly."
+    },
+    {
+      "id": "useful_benefit",
+      "rule": "At least one reproducible coverage/recovery benefit with paired counts and examples and no correctness-gate regression; portability deferred until new-board evidence. Mixed benefit permits at most one bounded follow-up, not automatic promotion."
+    },
+    {
+      "id": "cost",
+      "rule": "Measure isolated three-field throughput against provisional 10Hz budget, memory/startup/dependencies/setup. Misses require an explicit feasibility decision, never conceal backlog as freshness."
+    }
+  ],
+  "result_schema": {
+    "identity": [
+      "manifest_sha256",
+      "engine_id",
+      "configuration_sha256",
+      "recording_id",
+      "field",
+      "split",
+      "window_id"
+    ],
+    "required": [
+      "counts",
+      "temporal",
+      "runtime",
+      "paired_regressions",
+      "paired_benefits",
+      "gate_results",
+      "limitations"
+    ],
+    "gate_result": [
+      "id",
+      "status",
+      "evidence"
+    ],
+    "gate_statuses": [
+      "pass",
+      "fail",
+      "inconclusive"
+    ],
+    "missing_evidence": "Explicit null plus reason; never zero or pass. Native confidence is diagnostic, not probability or cross-engine comparable."
+  },
+  "output_policy": "Offline diagnostic only; no camera/server/OBS integration or output promotion."
+}
