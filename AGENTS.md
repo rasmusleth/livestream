@@ -34,7 +34,7 @@ Run from the repository root:
 python3 scripts/check.py
 ```
 
-The initial development target is macOS with Python 3.12. Node.js 24, FFmpeg, and ffprobe are also required for the complete check. No Python or npm packages are required.
+The initial development target is macOS with Python 3.12. Node.js 24, FFmpeg, and ffprobe are also required for the complete check. The main application and its standard validation checks require no third-party Python or npm packages. Experimental tooling may have separate dependencies; see the requirements files under `experiments/`.
 
 The check compiles Python in memory, validates browser JavaScript syntax and calibration bounds, and runs unit and generated-video pipeline tests. Real-recording tests are skipped when `data/readings.json` is absent. When changing extraction behavior and the recording is available, also run:
 
@@ -46,3 +46,41 @@ python3 scripts/check.py
 For UI changes, open the local viewer and check loading, playback, seeking, readability, and uncertain-reading status. CI does not replace that visual check.
 
 In the PR, explain the concrete change, validation performed, and material limitations. Do not report a check as passing if it was skipped or could not run.
+
+## Dependencies
+
+### General principles
+
+- Prefer Python's standard library and existing project dependencies where practical.
+- Introduce new dependencies only when they provide a clear benefit over the existing implementation.
+- Keep production and experimental dependencies separate. Do not introduce experimental dependencies into the main application unless explicitly justified.
+- Avoid broad or unrelated dependency upgrades.
+- Keep dependency manifests and lockfiles synchronized where applicable.
+- Prefer pinned versions and reproducible dependency resolution.
+
+### Security verification
+
+Before introducing a new third-party dependency:
+
+1. **Verify legitimacy:** Confirm the exact package name on its official registry (PyPI, npm, etc.). Check its publisher, repository, and maintenance status.
+2. **Check vulnerabilities:** Check for known security advisories affecting the selected version using appropriate tools (e.g., `pip-audit`, `npm audit`).
+3. **Evaluate necessity:** Consider whether existing dependencies or standard-library functionality could provide the same capability.
+4. **Verify the source:** Prefer official package registries. Do not install packages from unverified registries, Git repositories, or arbitrary URLs.
+
+If verification cannot be completed, explain the limitation and request user approval before installing the dependency.
+
+### Installation and execution
+
+- Use isolated Python virtual environments for third-party Python packages.
+- Do not install Python packages globally or modify the system Python environment.
+- Do not bypass sandbox restrictions to install dependencies without explicit user approval.
+- Do not execute remote installation scripts (e.g., `curl ... | sh`) without explicit user approval.
+- Do not disable security checks or weaken sandbox restrictions to complete an installation.
+- Never inspect, expose, or transmit credentials, private keys, or API tokens during dependency installation.
+- Keep dependency installation and execution within the permitted development environment.
+
+### Validation and reporting
+
+- Run the appropriate dependency vulnerability audit when dependencies change.
+- Report any vulnerabilities or unresolved security concerns.
+- Summarize newly introduced direct dependencies, their purpose, and whether they are production or experimental dependencies.
