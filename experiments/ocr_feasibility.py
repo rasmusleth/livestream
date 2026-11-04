@@ -198,6 +198,24 @@ def worker(request_path, output):
     write_new(output, result)
 
 
+def run_worker_trials(output, trials, *, python=sys.executable):
+    """Run an already written request in the same network-denied OCR worker."""
+    env = {**os.environ, 'PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK': 'True',
+           'PADDLE_PDX_CACHE_HOME': str(output/'cache'), 'HF_HUB_OFFLINE': '1',
+           'HF_HUB_DISABLE_TELEMETRY': '1', 'OMP_NUM_THREADS': '1',
+           'OPENBLAS_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1'}
+    runs = []
+    for trial in range(trials):
+        dest = output/f'trial-{trial+1}.json'
+        command = ['sandbox-exec', '-p', NETWORK_POLICY, str(python), str(Path(__file__).resolve()),
+                   '_worker', '--request', str(output/'request.json'), '--output', str(dest)]
+        child_started = time.perf_counter()
+        with (output/f'trial-{trial+1}.log').open('x') as log:
+            subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+        runs.append({**identity(dest), 'child_process_wall_s': time.perf_counter()-child_started})
+    return runs
+
+
 def run(args):
     if sys.platform != 'darwin':
         raise ValueError('This feasibility runner requires the measured macOS network sandbox')
@@ -216,19 +234,7 @@ def run(args):
     request = {'model_spec': spec, 'model_dir': str(args.model_dir.resolve()),
                'samples': samples, 'repeats': args.repeats}
     write_new(output/'request.json', request)
-    env = {**os.environ, 'PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK': 'True',
-           'PADDLE_PDX_CACHE_HOME': str(output/'cache'), 'HF_HUB_OFFLINE': '1',
-           'HF_HUB_DISABLE_TELEMETRY': '1', 'OMP_NUM_THREADS': '1',
-           'OPENBLAS_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1'}
-    runs = []
-    for trial in range(args.trials):
-        dest = output/f'trial-{trial+1}.json'
-        command = ['sandbox-exec', '-p', NETWORK_POLICY, sys.executable, str(Path(__file__).resolve()),
-                   '_worker', '--request', str(output/'request.json'), '--output', str(dest)]
-        child_started = time.perf_counter()
-        with (output/f'trial-{trial+1}.log').open('x') as log:
-            subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
-        runs.append({**identity(dest), 'child_process_wall_s': time.perf_counter()-child_started})
+    runs = run_worker_trials(output, args.trials)
     result = {'version': 1, 'manifest': identity(args.manifest), 'workload': identity(args.workload),
               'model_spec': identity(args.model_spec), 'runtime_lock': identity(RUNTIME_LOCK),
               'runner': identity(Path(__file__)), 'git_revision': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
