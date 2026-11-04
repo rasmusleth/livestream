@@ -151,12 +151,6 @@ class CandidateState:
         self.recent_frames = deque(maxlen=FRAME_HISTORY)
 
     def update(self, evidence, t, *, layout, frame_id):
-        if type(t) not in (int, float) or not math.isfinite(t) or t < 0:
-            raise ValueError('Expected nonnegative finite source time')
-        if self.t is not None and t <= self.t:
-            raise ValueError('Source time must increase; start a new state after seeking')
-        if not isinstance(frame_id, str) or not frame_id:
-            raise ValueError('Expected stable source-frame identity')
         clock, clock_reason = clock_observation([evidence[name]['value'] for name in CLOCK_SLOTS], layout)
         observations = {'clock': clock}
         reasons = {'clock': clock_reason}
@@ -164,6 +158,27 @@ class CandidateState:
             value = evidence[name]['value']
             observations[name] = value if digit(value) else None
             reasons[name] = evidence[name].get('reason') or 'unavailable'
+        return self.update_observations(observations, t, reasons=reasons, frame_id=frame_id)
+
+    def update_observations(self, observations, t, *, reasons, frame_id):
+        """Confirm parsed whole-field values; None carries an explicit rejection reason."""
+        if type(t) not in (int, float) or not math.isfinite(t) or t < 0:
+            raise ValueError('Expected nonnegative finite source time')
+        if self.t is not None and t <= self.t:
+            raise ValueError('Source time must increase; start a new state after seeking')
+        if not isinstance(frame_id, str) or not frame_id:
+            raise ValueError('Expected stable source-frame identity')
+        if observations.keys() != self.fields.keys() or reasons.keys() != self.fields.keys():
+            raise ValueError('Expected all three named observations and reasons')
+        for name, value in observations.items():
+            if value is None:
+                if not isinstance(reasons[name], str) or not reasons[name]:
+                    raise ValueError('Missing observations need a reason')
+            elif name == 'clock':
+                if not isinstance(value, ClockObservation) or value.layout not in LAYOUTS:
+                    raise ValueError('Expected a parsed clock observation')
+            elif not digit(value):
+                raise ValueError('Expected a one-digit score observation')
         duplicate = frame_id in self.recent_frames
         self.recent_frames.append(frame_id)
         self.t = t
