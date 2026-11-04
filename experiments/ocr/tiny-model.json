@@ -1,0 +1,28 @@
+{
+  "model_name": "PP-OCRv6_tiny_rec",
+  "repository": "PaddlePaddle/PP-OCRv6_tiny_rec",
+  "revision": "0736086f72f666350ebcdc0c3a504eeac89cdfad",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 23488,
+      "sha256": "b39a61b887fe5ddc201a15d92b6814bb9e634fb5acb66db3f29ba53cff7d108c"
+    },
+    {
+      "name": "inference.json",
+      "bytes": 108959,
+      "sha256": "b5b14770c7dcf092781e92f4278a2ae5f95048f08b4b8a04140e88cb2745f147"
+    },
+    {
+      "name": "inference.pdiparams",
+      "bytes": 4420410,
+      "sha256": "bb2f8f54d1e25f28c71b6fa4fe23f5940e159cae27fbee96155c99f822156e57"
+    },
+    {
+      "name": "inference.yml",
+      "bytes": 55571,
+      "sha256": "66170210bad538e83fff3c4a3867e547d6bf20b50d64b20347c4b913f3034ea1"
+    }
+  ]
+}

@@ -138,3 +138,7 @@ Follow the [six-task working plan](../docs/ocr-comparison-plan.md) sequentially.
 ## Frozen whole-field OCR benchmark
 
 [Task 1 benchmark and reproduction](../docs/ocr-benchmark.md) defines the private input recipe, RGB crop export, whole-recording OCR split and hash lock. `python3 experiments/ocr_benchmark.py verify data/controlled-recordings/v1/ocr-benchmark-v1/manifest-r2.json` checks the frozen assets without optional image packages. Crop export uses the existing optional environment. No learned OCR engine is installed or run; later feasibility uses development recordings only. The portable [comparison contract](benchmark/contract-v1.json) fixes correctness, unreadable exposure, held ages, recovery and practical-cost gates.
+
+## Local learned OCR feasibility
+
+[Task 2 findings and reproduction](../docs/local-ocr-feasibility.md) describe `ocr_feasibility.py provision` and `run`. Use `ocr/requirements-macos-arm64.txt` in a separate Python 3.12 environment; default application and region dependencies are unchanged. Model JSON specifications pin official revisions/file hashes. The smoke workload uses only development recordings; verification inputs are rejected. Inference requires a macOS network-deny child, retains raw Unicode/text/confidence without repairs and measures three-field cost. No parser, confirmation adapter, full-timeline accuracy comparison or output integration is implemented. Tiny is the primary next-step configuration; small remains a measured reference with higher cost and persistent recognition limitations.

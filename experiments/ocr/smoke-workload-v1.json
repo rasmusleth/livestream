@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "benchmark_sha256": "1b915a3e286e621f4ceaf97c7bd6326622a30d01d408fe217b3b01a0ea1d5eb4",
+  "purpose": "Development-only local recognizer feasibility; no temporal confirmation or verification-recording inference. Selected before numeric smoke reports. Includes clear, mixed, blank and covered fields.",
+  "samples": [
+    {
+      "recording_id": "original",
+      "index": 700
+    },
+    {
+      "recording_id": "original",
+      "index": 705
+    },
+    {
+      "recording_id": "original",
+      "index": 1188
+    },
+    {
+      "recording_id": "original",
+      "index": 1190
+    },
+    {
+      "recording_id": "live",
+      "index": 430
+    },
+    {
+      "recording_id": "live",
+      "index": 433
+    },
+    {
+      "recording_id": "live",
+      "index": 470
+    },
+    {
+      "recording_id": "live",
+      "index": 473
+    },
+    {
+      "recording_id": "controlled",
+      "index": 0
+    },
+    {
+      "recording_id": "controlled",
+      "index": 108
+    },
+    {
+      "recording_id": "controlled",
+      "index": 168
+    },
+    {
+      "recording_id": "controlled",
+      "index": 368
+    },
+    {
+      "recording_id": "controlled",
+      "index": 505
+    },
+    {
+      "recording_id": "controlled",
+      "index": 609
+    },
+    {
+      "recording_id": "controlled",
+      "index": 704
+    },
+    {
+      "recording_id": "controlled",
+      "index": 823
+    },
+    {
+      "recording_id": "controlled",
+      "index": 928
+    },
+    {
+      "recording_id": "controlled",
+      "index": 1049
+    },
+    {
+      "recording_id": "controlled",
+      "index": 1099
+    },
+    {
+      "recording_id": "controlled",
+      "index": 1149
+    },
+    {
+      "recording_id": "controlled",
+      "index": 1172
+    }
+  ]
+}
